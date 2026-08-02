@@ -12,7 +12,7 @@ import { isDebugEnabled } from "./debug/debugStats";
 import { useKeyboard } from "./input/useKeyboard";
 import { usePointerOrbit } from "./input/usePointerOrbit";
 import ActorLayer from "./net/ActorLayer";
-import { useRealtime } from "./net/useRealtime";
+import { useRealtime, worldSink } from "./net/useRealtime";
 import { visitorId } from "./net/visitorId";
 import { world } from "./config/worldConfig";
 import Player from "./Player";
@@ -52,9 +52,18 @@ export default function Engine({ children, catalog, placementLimits }: Props) {
   const playerId = useMemo(() => visitorId(), []);
   useRealtime({ host: import.meta.env.VITE_RELAY_HOST, playerId });
 
-  // The network path does not exist yet, but the world already accepts
-  // changes; there is no reason to wait for a socket to find out whether a
-  // placed crate is something a character can climb.
+  // Changes from the relay join the same pending queue the dev console uses,
+  // so a crate placed by an agent and one typed at the console reach the
+  // world through one path and are both applied by the commit phase.
+  useEffect(() => {
+    worldSink.apply = (ops) => {
+      placements.enqueue(ops);
+    };
+    return () => {
+      worldSink.apply = () => {};
+    };
+  }, [placements]);
+
   useEffect(() => {
     if (!DEBUG) return undefined;
     return attachDevConsole(placements, catalog);

@@ -51,7 +51,10 @@ export interface Policy {
 export const DEFAULT_POLICY: Policy = {
   capacity: 20,
   refillPerSecond: 12,
-  cost: { state: 1, ping: 1, chat: 6 },
+  // Building is charged hardest of all. It is the only frame that changes
+  // what other people see permanently enough to matter, it costs storage and
+  // a broadcast, and nobody legitimately builds twice a second.
+  cost: { state: 1, ping: 1, chat: 6, build: 10, unbuild: 4 },
   defaultCost: 4,
   strikeLimit: 12,
 };
