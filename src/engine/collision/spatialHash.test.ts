@@ -58,32 +58,32 @@ describe("sweepXZ", () => {
   const box = crate("a", 0, 4);
 
   it("finds a box directly ahead", () => {
-    const hit = sweepXZ(box, 0, 0, 0, 0, 1, 10, 1.8);
+    const hit = sweepXZ(box, 0, 0, 0, 0, 1, 10);
     expect(hit).toBeCloseTo(3.5, 6);
   });
 
   it("misses a box to one side", () => {
-    expect(sweepXZ(box, 5, 0, 0, 0, 1, 10, 1.8)).toBeNull();
+    expect(sweepXZ(box, 5, 0, 0, 0, 1, 10)).toBeNull();
   });
 
   it("misses a box beyond the sweep distance", () => {
-    expect(sweepXZ(box, 0, 0, 0, 0, 1, 2, 1.8)).toBeNull();
+    expect(sweepXZ(box, 0, 0, 0, 0, 1, 2)).toBeNull();
   });
 
   it("misses a box the body passes entirely beneath", () => {
     // A sign on a post is not something a body walks into at ankle height.
     const overhead = boxFrom("o", 0, 0, 4, 1, 0.5, 0.5, 0.5, 6, false);
-    expect(sweepXZ(overhead, 0, 0, 0, 0, 1, 10, 1.8)).toBeNull();
+    expect(sweepXZ(overhead, 0, 0, 0, 0, 1, 10)).toBeNull();
   });
 
   it("misses a box entirely below the body", () => {
     const sunken = boxFrom("s", 0, -8, 4, 1, 0.5, 0.5, 0.5, 0, false);
-    expect(sweepXZ(sunken, 0, 0, 0, 0, 1, 10, 1.8)).toBeNull();
+    expect(sweepXZ(sunken, 0, 0, 0, 0, 1, 10)).toBeNull();
   });
 
   it("finds a box approached diagonally", () => {
     const corner = crate("c", 4, 4);
-    const hit = sweepXZ(corner, 0, 0, 0, 1, 1, 20, 1.8);
+    const hit = sweepXZ(corner, 0, 0, 0, 1, 1, 20);
     expect(hit).not.toBeNull();
   });
 });
