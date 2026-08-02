@@ -1,0 +1,51 @@
+@use "../styles/tokens" as *;
+
+.hint {
+  @include panel;
+
+  position: fixed;
+  left: 50%;
+  top: 1.5rem;
+  z-index: 13;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  max-width: min(22rem, calc(100vw - 3rem));
+  padding: 0.7rem 0.95rem;
+  transform: translateX(-50%);
+  font-family: $font-ui;
+  pointer-events: none;
+
+  p {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: $ink-muted;
+  }
+}
+
+.glyph {
+  flex: none;
+  width: 1.1rem;
+  height: 1.7rem;
+  border: 1.5px solid $ink-subtle;
+  border-radius: 3px;
+  // A phone, turning. The animation is the instruction.
+  animation: turn 2.6s $ease infinite;
+}
+
+@keyframes turn {
+  0%,
+  30% {
+    transform: rotate(0deg);
+  }
+
+  55%,
+  85% {
+    transform: rotate(-90deg);
+  }
+
+  100% {
+    transform: rotate(0deg);
+  }
+}

@@ -7,6 +7,8 @@ import { greyboxConfig } from "./world/greybox/config";
 import ControlsHint from "./ui/ControlsHint";
 import InteractPrompt from "./ui/InteractPrompt";
 import Panel from "./ui/Panel";
+import RotateHint from "./ui/RotateHint";
+import TouchControls from "./ui/TouchControls";
 import LoadingScreen from "./ui/LoadingScreen";
 
 // The 3D stack is the only lazy boundary in the app: the DOM overlay paints
@@ -31,6 +33,8 @@ export default function App() {
       <ControlsHint />
       <InteractPrompt />
       <Panel />
+      <TouchControls />
+      <RotateHint />
       {DEBUG && (
         <Suspense fallback={null}>
           <DebugHUD />
