@@ -8,6 +8,7 @@ import { radiiForDevice } from "../../engine/streaming/chunkGrid";
 import { greyboxConfig as CFG } from "./config";
 import GreyBoxChunk from "./GreyBoxChunk";
 import { greyboxChunks } from "./manifest";
+import Drifting from "../../engine/motion/Drifting";
 
 /**
  * The grey box: lighting, and a streamed world.
@@ -43,14 +44,16 @@ export default function GreyBoxScene({ colliderRegistry }: Props) {
         intensity={sun.intensity}
       />
 
-      <ChunkManager
-        chunks={greyboxChunks}
-        chunkSize={CFG.units.chunkSize}
-        radii={radii}
-        selectIntervalSec={CFG.streaming.selectIntervalSec}
-        colliderRegistry={colliderRegistry}
-        renderChunk={renderChunk}
-      />
+      <Drifting name={CFG.id} shape={CFG.atmosphere.drift}>
+        <ChunkManager
+          chunks={greyboxChunks}
+          chunkSize={CFG.units.chunkSize}
+          radii={radii}
+          selectIntervalSec={CFG.streaming.selectIntervalSec}
+          colliderRegistry={colliderRegistry}
+          renderChunk={renderChunk}
+        />
+      </Drifting>
     </>
   );
 }

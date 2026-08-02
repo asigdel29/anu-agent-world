@@ -1,4 +1,6 @@
 import type { ChunkRadii, Vec3, WorldConfig } from "./types";
+import { MAX_STEP_SEC } from "../locomotion/moveController";
+import { peakRiseSpeed } from "../motion/islandFloat";
 
 /**
  * Cross-field invariants a world must satisfy.
@@ -21,6 +23,21 @@ const MAX_STEP_SHARE_OF_HEIGHT = 0.5;
 
 /** Fog must hide the streaming edge by this multiple of the load radius. */
 const FOG_COVER_FACTOR = 1.5;
+
+/**
+ * Share of the controller's step tolerance an island's drift may move the
+ * ground within a single frame.
+ *
+ * A quarter, because the drift is meant to go unnoticed. Spending more of the
+ * budget breaks nothing at once; it makes standing still feel subtly wrong,
+ * which is far harder to trace back than a fall.
+ *
+ * Note this is compared against a *distance travelled in one frame*, not
+ * against a speed. Comparing units per second with a tolerance measured in
+ * units is a category error, and one that rejects a perfectly calm island
+ * while admitting a violent short-period one.
+ */
+const DRIFT_FRAME_MARGIN = 0.25;
 
 function isFinitePositive(n: number): boolean {
   return Number.isFinite(n) && n > 0;
@@ -193,6 +210,34 @@ export function validateWorldConfig(cfg: WorldConfig): string[] {
     }
   }
   checkVec3("atmosphere.sun.direction", cfg.atmosphere.sun.direction, out);
+
+  // An island's drift carries its colliders, so the ground genuinely moves
+  // under the character. That is harmless while it moves far slower than the
+  // controller resolves, and a hazard the moment somebody makes the islands
+  // livelier. The relationship is checked rather than left as a comment for
+  // that person to find.
+  const drift = cfg.atmosphere.drift;
+  if (drift !== null) {
+    if (!isFinitePositive(drift.periodSec)) {
+      out.push("atmosphere.drift.periodSec must be a positive number");
+    } else {
+      // The worst case is the longest frame the loop will integrate, since
+      // that is when the ground moves furthest between two resolves.
+      const perFrame = peakRiseSpeed(drift) * MAX_STEP_SEC;
+      const budget = locomotion.stepDownTolerance * DRIFT_FRAME_MARGIN;
+      if (perFrame > budget) {
+        out.push(
+          `atmosphere.drift moves the ground ${perFrame.toFixed(4)} units in a single ` +
+            `frame, against a budget of ${budget.toFixed(4)} ` +
+            `(locomotion.stepDownTolerance ${locomotion.stepDownTolerance}); the island ` +
+            `would read as a lift rather than as breathing`,
+        );
+      }
+    }
+    if (drift.rise < 0 || drift.sway < 0 || drift.roll < 0) {
+      out.push("atmosphere.drift amplitudes must not be negative");
+    }
+  }
 
   // ---- streaming and placements -----------------------------------------
   checkRadii("streaming.radii", streaming.radii, out);

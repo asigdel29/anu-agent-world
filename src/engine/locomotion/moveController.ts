@@ -17,6 +17,17 @@ import { isBlockedByObstacle, isClimbableStep, isWalkableStepDown } from "./step
  */
 
 /** Share of an intended move that must survive a slide to count as clear. */
+/**
+ * Longest frame the simulation integrates in one go.
+ *
+ * A tab restored from the background hands back a delta of seconds; stepping
+ * that whole amount teleports the character through walls. Exported because
+ * anything reasoning about per-frame motion -- including the world validator,
+ * which checks how far a drifting island moves between frames -- must use the
+ * same worst case the frame loop does.
+ */
+export const MAX_STEP_SEC = 1 / 20;
+
 const BLOCKED_RATIO = 0.95;
 
 /** Vertical slack allowed when deciding the character has landed. */
