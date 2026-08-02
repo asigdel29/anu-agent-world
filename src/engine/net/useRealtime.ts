@@ -32,15 +32,19 @@ interface RealtimeStore {
   status: Status;
   /** Who the relay says this client is, once it has said so. */
   selfId: string | null;
-  /** Bumped when the set of actors changes, never when one moves. */
-  rosterRev: number;
+  /**
+   * Who is here, as a new array each time the set changes and never when one
+   * of them merely moves. React mounts a body per entry; motion reaches the
+   * frame loop through the registry instead.
+   */
+  roster: readonly string[];
   set: (partial: Partial<RealtimeStore>) => void;
 }
 
 export const useRealtimeStore = create<RealtimeStore>((set) => ({
   status: "solo",
   selfId: null,
-  rosterRev: 0,
+  roster: [],
   set: (partial) => {
     set(partial);
   },
@@ -101,6 +105,12 @@ export function useRealtime({ host, playerId }: RealtimeOptions): void {
     let pingSentAt = 0;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
+    // Rebuilt only when membership changes, so a moving room never allocates
+    // one. React needs a new array to notice; the frame loop never reads it.
+    const publishRoster = (): void => {
+      store({ roster: [...actors.actors.keys()] });
+    };
+
     const send = (frame: unknown): void => {
       const ws = socket.current;
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -136,7 +146,7 @@ export function useRealtime({ host, playerId }: RealtimeOptions): void {
         return;
       }
       if (applyFrame(actors, frame, now)) {
-        store({ rosterRev: actors.rosterRev });
+        publishRoster();
       }
     };
 
@@ -169,7 +179,7 @@ export function useRealtime({ host, playerId }: RealtimeOptions): void {
         socket.current = null;
         // Everyone drawn came from this connection, so none of them is still
         // there. Keeping them would leave a room of motionless strangers.
-        if (clearActors(actors)) store({ rosterRev: actors.rosterRev });
+        if (clearActors(actors)) publishRoster();
         store({ status: "solo", selfId: null });
         realtime.offset = null;
         if (shouldRetry(event.code)) schedule();
@@ -192,7 +202,7 @@ export function useRealtime({ host, playerId }: RealtimeOptions): void {
     }, PING_INTERVAL_MS);
 
     const pruneTimer = setInterval(() => {
-      if (pruneActors(actors, Date.now())) store({ rosterRev: actors.rosterRev });
+      if (pruneActors(actors, Date.now())) publishRoster();
     }, PRUNE_INTERVAL_MS);
 
     connect();
@@ -210,7 +220,7 @@ export function useRealtime({ host, playerId }: RealtimeOptions): void {
       socket.current?.close(1000, "unmounted");
       socket.current = null;
       clearActors(actors);
-      store({ status: "solo", selfId: null, rosterRev: actors.rosterRev });
+      store({ status: "solo", selfId: null, roster: [] });
     };
   }, [host, playerId, store]);
 }
