@@ -6,6 +6,7 @@ import { isAgentId } from "../../../protocol/ids";
 import { isSpeaking } from "./actorRegistry";
 import { LERP_SPEED, dampFraction, stepAngle } from "./remoteInterp";
 import { actors } from "./useRealtime";
+import { toonRamp } from "../assets/toonRamp";
 
 /**
  * One other body in the world.
@@ -67,12 +68,14 @@ export default function Actor({ id, height, radius }: Props) {
     <group ref={group}>
       <mesh position={[0, height / 2, 0]}>
         <capsuleGeometry args={[radius, height - radius * 2, 4, 12]} />
-        <meshLambertMaterial color={colour} />
+        <meshToonMaterial color={colour} gradientMap={toonRamp()} />
       </mesh>
       {/* A nose, so facing is readable while there is no model. */}
       <mesh position={[0, height * 0.7, radius + 0.1]}>
         <boxGeometry args={[0.12, 0.12, 0.3]} />
-        <meshLambertMaterial color="#1a1a1a" />
+        {/* Flat and unlit: the facing marker belongs to the outline
+            language rather than to the lit surfaces. */}
+        <meshBasicMaterial color="#4e3c40" />
       </mesh>
       {/* Speech is marked here and read here; the words themselves are drawn
           by the overlay, which can lay out text without shipping a font into

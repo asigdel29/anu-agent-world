@@ -1,5 +1,6 @@
 import type { ChunkSpec } from "../../engine/streaming/chunkGrid";
 import { greyboxConfig as CFG } from "./config";
+import { toonRamp } from "../../engine/assets/toonRamp";
 
 /**
  * The contents of one grey-box cell.
@@ -23,10 +24,10 @@ const PALETTE = {
   ground: "#cab1ad",
   groundAlt: "#c4b1a1",
   ledge: "#a1bf79",
-  ledgeRefused: "#e08a7a",
+  ledgeRefused: "#fd524f",
   ramp: "#98837f",
   wall: "#7d7b79",
-  platform: "#87ccfd",
+  platform: "#64a5c8",
 };
 
 interface Anchor {
@@ -54,7 +55,7 @@ function Box({
   return (
     <mesh position={position} rotation={rotation ?? [0, 0, 0]}>
       <boxGeometry args={size} />
-      <meshLambertMaterial color={color} />
+      <meshToonMaterial color={color} gradientMap={toonRamp()} />
     </mesh>
   );
 }

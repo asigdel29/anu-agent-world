@@ -4,6 +4,7 @@ import type { InstancedMesh } from "three";
 
 import type { PropKind } from "./catalogTypes";
 import type { Placement } from "./placementOps";
+import { toonRamp } from "../assets/toonRamp";
 
 /**
  * Every live instance of one kind, drawn in a single call.
@@ -111,7 +112,7 @@ export default function InstancedKind({ kind, instances, version }: Props) {
         <cylinderGeometry args={[kind.sizeX / 2, kind.sizeX / 2, kind.sizeY, 12]} />
       )}
       {lit ? (
-        <meshLambertMaterial color={kind.color} />
+        <meshToonMaterial color={kind.color} gradientMap={toonRamp()} />
       ) : (
         <meshBasicMaterial color={kind.color} />
       )}

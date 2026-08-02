@@ -17,6 +17,7 @@ import { realtime } from "./net/useRealtime";
 import type { PlacementSnapshot, PlacementStore } from "./placements/placementStore";
 import { subjectPosition } from "./streaming/chunkStore";
 import { world } from "./config/worldConfig";
+import { toonRamp } from "./assets/toonRamp";
 
 /**
  * The character, and the one ordered pass over everything that moves.
@@ -197,12 +198,14 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
           constants describe — but the styling does not, yet. */}
       <mesh position={[0, height / 2, 0]}>
         <capsuleGeometry args={[radius, height - radius * 2, 4, 12]} />
-        <meshLambertMaterial color="#ff4f38" />
+        <meshToonMaterial color="#ff4f38" gradientMap={toonRamp()} />
       </mesh>
       {/* A nose, so facing is readable while there is no model. */}
       <mesh position={[0, height * 0.7, radius + 0.1]}>
         <boxGeometry args={[0.12, 0.12, 0.3]} />
-        <meshLambertMaterial color="#1a1a1a" />
+        {/* Flat and unlit: the facing marker belongs to the outline
+            language rather than to the lit surfaces. */}
+        <meshBasicMaterial color="#4e3c40" />
       </mesh>
     </group>
   );
