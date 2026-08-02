@@ -1,5 +1,5 @@
-import { PERSIST_INTERVAL_MS, PLAYER_TTL_MS } from "../protocol/limits";
-import { connectionId, isAgentId } from "../protocol/ids";
+import { PERSIST_INTERVAL_MS, PLAYER_TTL_MS, WRITE_PATH } from "../protocol/limits";
+import { agentId, connectionId, isAgentId } from "../protocol/ids";
 import type { ActorRecord, ServerFrame } from "../protocol/messages";
 import { parseFrame, readClientFrame } from "../protocol/messages";
 import type { Placement } from "../protocol/placement";
@@ -23,6 +23,9 @@ import { admitBuild, expiredIds, mayRemove } from "./worldState";
  * it is; the relay says who it is.
  */
 
+/** Most operations one agent write may carry. */
+const MAX_WRITE_BATCH = 32;
+
 export interface Env {
   readonly ROOM: DurableObjectNamespace;
   /**
@@ -30,6 +33,11 @@ export interface Env {
    * origin, which is what local development and any non-browser client need.
    */
   readonly ALLOWED_ORIGINS?: string;
+  /**
+   * The secret an agent writes with. Unset closes the write path entirely,
+   * which is the safe direction for the only control on it.
+   */
+  readonly WRITE_TOKEN?: string;
 }
 
 export class WorldRoom {
@@ -175,17 +183,31 @@ export class WorldRoom {
    * both noise and a way to spam the room without ever building anything.
    */
   private async build(ws: WebSocket, authorId: string, raw: unknown, now: number): Promise<void> {
+    const refusal = await this.place(authorId, raw, now, false);
+    if (refusal) this.send(ws, { type: "refused", reason: refusal });
+  }
+
+  /**
+   * Put something in the world, or say why not.
+   *
+   * The one implementation both doors use. A visitor over a socket and an
+   * agent over HTTP reach exactly this, which is the whole safety argument:
+   * there is no privileged path with its own rules to get wrong.
+   */
+  private async place(
+    authorId: string,
+    raw: unknown,
+    now: number,
+    permanent: boolean,
+  ): Promise<string | null> {
     const world = await this.built(now);
     this.sequence += 1;
     const { place, evicted, refusal } = admitBuild(
       world,
-      { raw, authorId, now, permanent: false },
+      { raw, authorId, now, permanent },
       this.sequence,
     );
-    if (!place) {
-      this.send(ws, { type: "refused", reason: refusal ?? "refused" });
-      return;
-    }
+    if (!place) return refusal ?? "refused";
 
     // The revision of what is being removed travels with the removal, or the
     // client's monotonic rule discards it for having nothing to compare to.
@@ -207,19 +229,101 @@ export class WorldRoom {
       type: "world",
       ops: [...removals, { t: "upsert", place }],
     });
+    return null;
   }
 
-  /** Remove something, if the asker is the one who built it. */
-  private async unbuild(authorId: string, id: string, now: number): Promise<void> {
+  /**
+   * Remove something, if the asker is the one who built it.
+   *
+   * Reports a reason rather than failing silently, because the HTTP caller
+   * has no other way to learn that its request did nothing. A socket is told
+   * nothing, deliberately: naming what somebody else built, in order to
+   * refuse to remove it, is a way to enumerate the world.
+   */
+  private async unbuild(authorId: string, id: string, now: number): Promise<string | null> {
     const world = await this.built(now);
     const existing = world.get(id);
-    if (!mayRemove(existing, authorId)) return;
+    if (!mayRemove(existing, authorId)) return "not yours to remove";
     world.delete(id);
     void this.state.storage.delete(keyFor("place", id));
     this.broadcast({ type: "world", ops: [{ t: "remove", id, rev: existing?.rev ?? 0 }] });
+    return null;
+  }
+
+  /**
+   * Make something permanent.
+   *
+   * The counterpart to everything a visitor builds being temporary: griefing
+   * heals on its own, and what was good is kept deliberately rather than by
+   * having survived.
+   */
+  private async promote(id: string, now: number): Promise<string | null> {
+    const world = await this.built(now);
+    const existing = world.get(id);
+    if (!existing) return "no such placement";
+    if (existing.expiresAt === null) return null;
+    const kept: Placement = { ...existing, expiresAt: null, rev: existing.rev + 1 };
+    world.set(id, kept);
+    void this.state.storage.put(keyFor("place", id), kept);
+    this.broadcast({ type: "world", ops: [{ t: "upsert", place: kept }] });
+    return null;
+  }
+
+  /**
+   * Apply a batch of writes from an agent.
+   *
+   * Each operation is judged on its own and a refusal does not stop the ones
+   * behind it. An agent that asks for five things and gets four is far more
+   * useful than one whose whole turn fails because a single coordinate was
+   * out of bounds -- and the report says which, so it can try again.
+   */
+  private async write(request: Request): Promise<Response> {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return Response.json({ error: "body must be JSON" }, { status: 400 });
+    }
+    if (typeof body !== "object" || body === null) {
+      return Response.json({ error: "body must be an object" }, { status: 400 });
+    }
+
+    const fields = body as Record<string, unknown>;
+    const author = agentId(fields["agentId"]);
+    if (!author) return Response.json({ error: "agentId required" }, { status: 400 });
+
+    const ops = Array.isArray(fields["ops"]) ? (fields["ops"] as unknown[]) : null;
+    if (!ops) return Response.json({ error: "ops must be an array" }, { status: 400 });
+    if (ops.length > MAX_WRITE_BATCH) {
+      return Response.json({ error: `at most ${MAX_WRITE_BATCH} ops` }, { status: 400 });
+    }
+
+    const now = Date.now();
+    const results: { ok: boolean; reason?: string }[] = [];
+    for (const op of ops) {
+      const entry = typeof op === "object" && op !== null ? (op as Record<string, unknown>) : {};
+      const kind = entry["t"];
+      let refusal: string | null;
+      if (kind === "build") {
+        refusal = await this.place(author, entry["place"], now, entry["permanent"] === true);
+      } else if (kind === "remove") {
+        const id = typeof entry["id"] === "string" ? entry["id"] : "";
+        refusal = await this.unbuild(author, id, now);
+      } else if (kind === "promote") {
+        const id = typeof entry["id"] === "string" ? entry["id"] : "";
+        refusal = await this.promote(id, now);
+      } else {
+        refusal = "unknown operation";
+      }
+      results.push(refusal === null ? { ok: true } : { ok: false, reason: refusal });
+    }
+
+    return Response.json({ author, results });
   }
 
   async fetch(request: Request): Promise<Response> {
+    if (new URL(request.url).pathname === WRITE_PATH) return this.write(request);
+
     const { 0: client, 1: server } = new WebSocketPair();
     await this.welcome(server, new URL(request.url).searchParams.get("pid"));
     return new Response(null, { status: 101, webSocket: client });
@@ -266,7 +370,7 @@ export class WorldRoom {
     }
 
     if (frame.type === "unbuild") {
-      void this.unbuild(id, frame.id, now).catch(() => {});
+      void this.unbuild(id, frame.id, now).catch(() => null);
       return;
     }
 

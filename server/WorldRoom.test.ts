@@ -18,6 +18,14 @@ const STATE_FRAME = JSON.stringify({
 function makeRoom() {
   const state = new FakeDurableObjectState();
   const room = new WorldRoom(state as unknown as DurableObjectState);
+  const write = async (body: unknown) => {
+    const request = new Request("https://relay.test/world/ops", {
+      method: "POST",
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    });
+    const response = await room.fetch(request);
+    return { status: response.status, body: await response.json<Record<string, unknown>>() };
+  };
   const join = async (pid: unknown) => {
     const ws = new FakeWebSocket();
     await room.welcome(ws as unknown as WebSocket, pid);
@@ -25,7 +33,7 @@ function makeRoom() {
   };
   const say = (ws: FakeWebSocket, raw: string) =>
     room.webSocketMessage(ws as unknown as WebSocket, raw);
-  return { state, room, join, say };
+  return { state, room, join, say, write };
 }
 
 beforeEach(() => {
@@ -233,5 +241,109 @@ describe("departure", () => {
     room.webSocketError(leaver as unknown as WebSocket);
     state.forget(leaver);
     expect(peer.framesOf("leave").map((f) => f["id"])).toEqual(["aaa"]);
+  });
+});
+
+describe("writing over HTTP", () => {
+  const buildOp = (over: Record<string, unknown> = {}) => ({
+    t: "build",
+    place: { kind: "crate", x: 3, y: 0, z: 4, yaw: 0, scale: 1, ...over },
+  });
+
+  it("places what an agent asks for", async () => {
+    const { write } = makeRoom();
+    const { status, body } = await write({ agentId: "flora", ops: [buildOp()] });
+    expect(status).toBe(200);
+    expect(body["results"]).toEqual([{ ok: true }]);
+  });
+
+  it("forces the agent prefix, so HTTP cannot speak as a visitor", async () => {
+    // The mirror of the socket door, which refuses to hand a visitor an agent
+    // identity. Neither side can put words in the other's mouth.
+    const { write } = makeRoom();
+    const { body } = await write({ agentId: "aaaaaaaa", ops: [] });
+    expect(body["author"]).toBe("a-aaaaaaaa");
+  });
+
+  it("keeps an identifier that is already an agent's", async () => {
+    const { write } = makeRoom();
+    expect((await write({ agentId: "a-flora", ops: [] })).body["author"]).toBe("a-flora");
+  });
+
+  it("tells everyone connected what was built", async () => {
+    const { join, write } = makeRoom();
+    const watcher = await join("bbbbbbbb");
+    const before = watcher.framesOf("world").length;
+    await write({ agentId: "flora", ops: [buildOp()] });
+    const ops = watcher.framesOf("world").slice(before).flatMap((f) => f["ops"] as unknown[]);
+    expect(ops).toHaveLength(1);
+  });
+
+  it("judges each operation on its own", async () => {
+    // An agent that asks for four things and gets three is far more useful
+    // than one whose whole turn fails on a single bad coordinate.
+    const { write } = makeRoom();
+    const { body } = await write({
+      agentId: "flora",
+      ops: [buildOp(), buildOp({ kind: "castle" }), buildOp({ x: 99_999 }), buildOp()],
+    });
+    const results = body["results"] as { ok: boolean; reason?: string }[];
+    expect(results.map((r) => r.ok)).toEqual([true, false, false, true]);
+    expect(results[1]?.reason).toContain("unknown kind");
+    expect(results[2]?.reason).toBe("outside bounds");
+  });
+
+  it("makes a placement permanent on request", async () => {
+    const { write, state } = makeRoom();
+    await write({ agentId: "flora", ops: [{ ...buildOp(), permanent: true }] });
+    const stored = [...state.storage.entries.values()] as { expiresAt: number | null }[];
+    expect(stored.some((p) => p.expiresAt === null)).toBe(true);
+  });
+
+  it("promotes something that was temporary", async () => {
+    const { write, state } = makeRoom();
+    await write({ agentId: "flora", ops: [buildOp()] });
+    const placed = [...state.storage.entries.entries()].find(([k]) => k.startsWith("place:"));
+    const id = (placed?.[1] as { id: string }).id;
+    const { body } = await write({ agentId: "flora", ops: [{ t: "promote", id }] });
+    expect(body["results"]).toEqual([{ ok: true }]);
+    expect((state.storage.entries.get(`place:${id}`) as { expiresAt: null }).expiresAt).toBeNull();
+  });
+
+  it("refuses to promote something that is not there", async () => {
+    const { write } = makeRoom();
+    const { body } = await write({ agentId: "flora", ops: [{ t: "promote", id: "nope" }] });
+    expect(body["results"]).toEqual([{ ok: false, reason: "no such placement" }]);
+  });
+
+  it("will not remove another author's work", async () => {
+    const { write, state } = makeRoom();
+    await write({ agentId: "flora", ops: [buildOp()] });
+    const placed = [...state.storage.entries.entries()].find(([k]) => k.startsWith("place:"));
+    const id = (placed?.[1] as { id: string }).id;
+    const { body } = await write({ agentId: "mason", ops: [{ t: "remove", id }] });
+    expect(body["results"]).toEqual([{ ok: false, reason: "not yours to remove" }]);
+  });
+
+  it("rejects a malformed body rather than throwing", async () => {
+    const { write } = makeRoom();
+    expect((await write("{not json")).status).toBe(400);
+    expect((await write([1, 2, 3])).status).toBe(400);
+    expect((await write({ ops: [] })).status).toBe(400);
+    expect((await write({ agentId: "flora" })).status).toBe(400);
+    expect((await write({ agentId: "!!!", ops: [] })).status).toBe(400);
+  });
+
+  it("bounds how much one write may carry", async () => {
+    const { write } = makeRoom();
+    const ops = Array.from({ length: 64 }, () => buildOp());
+    expect((await write({ agentId: "flora", ops })).status).toBe(400);
+  });
+
+  it("names an operation it does not recognise", async () => {
+    const { write } = makeRoom();
+    const { body } = await write({ agentId: "flora", ops: [{ t: "detonate" }, null, 7] });
+    const results = body["results"] as { ok: boolean; reason?: string }[];
+    expect(results.every((r) => !r.ok && r.reason === "unknown operation")).toBe(true);
   });
 });

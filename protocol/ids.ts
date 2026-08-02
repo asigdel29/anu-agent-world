@@ -49,6 +49,21 @@ export function isReservedId(raw: unknown): boolean {
 }
 
 /**
+ * The identifier an agent writes under.
+ *
+ * The prefix is *forced* rather than required, which is the mirror image of
+ * the door a visitor comes through: a socket may never claim an agent
+ * identity, and an HTTP writer may never claim a visitor one. Neither side
+ * can put words in the other's mouth, and the rule is enforced by
+ * construction rather than by checking.
+ */
+export function agentId(raw: unknown): string {
+  const clean = sanitizeId(raw);
+  if (!clean) return "";
+  return isAgentId(clean) ? clean : `${AGENT_PREFIX}${clean}`.slice(0, MAX_ID_LENGTH);
+}
+
+/**
  * The identifier a connection should be given: the sanitised request of the
  * client where that is allowed, and a fresh random one otherwise.
  *

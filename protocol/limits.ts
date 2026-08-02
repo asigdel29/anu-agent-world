@@ -11,6 +11,16 @@
 /** The single shared room every visitor joins. */
 export const ROOM = "world";
 
+/**
+ * Where an agent writes to the world over HTTP.
+ *
+ * Here rather than in the Worker's entry module, because every named export
+ * of that module is a contract with the runtime -- each must be a handler or
+ * a Durable Object class, and a string constant among them stops the Worker
+ * from starting at all.
+ */
+export const WRITE_PATH = "/world/ops";
+
 /** Longest an identifier may be, as a URL parameter or a storage key. */
 export const MAX_ID_LENGTH = 36;
 
