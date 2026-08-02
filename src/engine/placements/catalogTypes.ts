@@ -69,29 +69,8 @@ export function buildCatalog(kinds: readonly PropKind[]): PropCatalog {
 }
 
 /**
- * The colours a placement may be tinted.
- *
- * A closed palette rather than free hex, for the same reason kinds are a
- * closed set: it is one fewer field where an arbitrary string reaches a
- * renderer, and it keeps a world that anyone can build in looking deliberate.
+ * The palette and its guard live in `protocol/`, because the relay validates
+ * a colour before the client ever sees it and the two must agree.
  */
-export const PALETTE = [
-  "#a1bf79",
-  "#85a46a",
-  "#805749",
-  "#97654e",
-  "#cab1ad",
-  "#64a5c8",
-  "#376898",
-  "#ff4f38",
-  "#fd524f",
-  "#f0edea",
-  "#7d7b79",
-  "#4e3c40",
-] as const;
-
-export type PaletteColor = (typeof PALETTE)[number];
-
-export function isPaletteColor(value: string): value is PaletteColor {
-  return (PALETTE as readonly string[]).includes(value);
-}
+export { PALETTE, isPaletteColor } from "../../../protocol/placement";
+export type { PaletteColor } from "../../../protocol/placement";

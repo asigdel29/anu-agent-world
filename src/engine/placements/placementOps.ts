@@ -1,5 +1,6 @@
 import type { PropCatalog } from "./catalogTypes";
-import { isPaletteColor } from "./catalogTypes";
+import type { Placement, PlacementLimits } from "../../../protocol/placement";
+import { validatePlacement } from "../../../protocol/placement";
 
 /**
  * Changes to the world, folded over a map as a pure reducer.
@@ -19,101 +20,20 @@ import { isPaletteColor } from "./catalogTypes";
  *
  * Keeping this pure means ordering, idempotency, and quota logic are testable
  * without a socket.
+ *
+ * What a placement *is*, and what makes one acceptable, is deliberately not
+ * defined here: the relay applies the same rules, and a validator that exists
+ * twice will eventually disagree with itself.
  */
 
-export interface Placement {
-  readonly id: string;
-  /** A key in the catalog. */
-  readonly kind: string;
-  readonly x: number;
-  readonly y: number;
-  readonly z: number;
-  /** Rotation about the vertical axis, radians. */
-  readonly yaw: number;
-  readonly scale: number;
-  /** Cell coordinates, used to bucket rendering and collision. */
-  readonly cx: number;
-  readonly cz: number;
-  /** Monotonic per-placement revision. */
-  readonly rev: number;
-  /** Who placed it: an agent identifier or a visitor identifier. */
-  readonly authorId: string;
-  readonly createdAt: number;
-  /** When it disappears, or null once promoted to permanent. */
-  readonly expiresAt: number | null;
-  readonly text?: string | undefined;
-  readonly color?: string | undefined;
-}
+export type { Placement, PlacementLimits };
+export { validatePlacement };
 
 export type PlacementMap = ReadonlyMap<string, Placement>;
 
 export type PlacementOp =
   | { readonly t: "upsert"; readonly place: Placement }
   | { readonly t: "remove"; readonly id: string; readonly rev: number };
-
-/** Limits a placement must satisfy to be accepted. */
-export interface PlacementLimits {
-  readonly minX: number;
-  readonly maxX: number;
-  readonly minZ: number;
-  readonly maxZ: number;
-  readonly minY: number;
-  readonly maxY: number;
-  readonly minScale: number;
-  readonly maxScale: number;
-  readonly maxTextLength: number;
-  /** Ceiling on simultaneously live placements. */
-  readonly maxLive: number;
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
-
-/**
- * Whether a placement is acceptable.
- *
- * This is the surface a compromised model reaches, so it is deliberately
- * exhaustive about the boring cases: a non-finite coordinate, a kind that is
- * not in the catalog, a scale of zero, a colour outside the palette.
- */
-export function validatePlacement(
-  place: Placement,
-  catalog: PropCatalog,
-  limits: PlacementLimits,
-): string | null {
-  if (typeof place.id !== "string" || place.id.length === 0) return "missing id";
-  if (!catalog.has(place.kind)) return `unknown kind "${place.kind}"`;
-
-  if (!isFiniteNumber(place.x) || !isFiniteNumber(place.y) || !isFiniteNumber(place.z)) {
-    return "coordinates must be finite";
-  }
-  if (!isFiniteNumber(place.yaw)) return "yaw must be finite";
-  if (!isFiniteNumber(place.rev)) return "rev must be finite";
-
-  if (place.x < limits.minX || place.x > limits.maxX) return "outside bounds";
-  if (place.z < limits.minZ || place.z > limits.maxZ) return "outside bounds";
-  if (place.y < limits.minY || place.y > limits.maxY) return "outside vertical range";
-
-  if (
-    !isFiniteNumber(place.scale) ||
-    place.scale < limits.minScale ||
-    place.scale > limits.maxScale
-  ) {
-    return "scale outside range";
-  }
-
-  if (place.text !== undefined) {
-    if (typeof place.text !== "string") return "text must be a string";
-    if (place.text.length > limits.maxTextLength) return "text too long";
-  }
-
-  if (place.color !== undefined && !isPaletteColor(place.color)) {
-    return "colour outside palette";
-  }
-
-  return null;
-}
 
 /**
  * Apply operations to a map, returning a new map only when something changed.
