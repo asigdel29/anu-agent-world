@@ -11,6 +11,7 @@ import { attachDevConsole } from "./debug/devConsole";
 import { isDebugEnabled } from "./debug/debugStats";
 import { useKeyboard } from "./input/useKeyboard";
 import { usePointerOrbit } from "./input/usePointerOrbit";
+import ActorLayer from "./net/ActorLayer";
 import { useRealtime } from "./net/useRealtime";
 import { visitorId } from "./net/visitorId";
 import { world } from "./config/worldConfig";
@@ -87,6 +88,10 @@ export default function Engine({ children, catalog, placementLimits }: Props) {
 
       {children(registry)}
       <PlacementLayer catalog={catalog} snapshot={snapshot} />
+      <ActorLayer
+        height={cfg.locomotion.playerHeight}
+        radius={cfg.locomotion.playerRadius}
+      />
       <Player
         colliderRegistry={registry}
         placements={placements}
