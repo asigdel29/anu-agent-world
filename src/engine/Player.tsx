@@ -7,6 +7,7 @@ import { createSurfaceQuery } from "./collision/surfaceQuery";
 import type { CameraContext } from "./camera/cameraDirector";
 import { createCameraDirector, createCameraPose } from "./camera/cameraDirector";
 import { createFollowMode } from "./camera/modes/follow";
+import { debugStats, isDebugEnabled } from "./debug/debugStats";
 import { consumeJump, inputState, resolveMoveDirection } from "./input/inputState";
 import { orbitState } from "./input/usePointerOrbit";
 import type { MoveIntent, MoveLimits } from "./locomotion/moveController";
@@ -28,6 +29,9 @@ import { world } from "./config/worldConfig";
 
 /** Longest frame the simulation will integrate in one go. */
 const MAX_STEP_SEC = 1 / 20;
+
+/** Read once: an overlay that appears mid-session is a distraction. */
+const DEBUG = isDebugEnabled();
 
 /** Per-instance values the frame loop mutates rather than reallocates. */
 interface Scratch {
@@ -134,6 +138,16 @@ export default function Player({ colliderRegistry }: Props) {
     director.sample(pose, dt, ctx);
     camera.position.set(pose.px, pose.py, pose.pz);
     camera.lookAt(pose.tx, pose.ty, pose.tz);
+
+    if (DEBUG) {
+      debugStats.x = state.x;
+      debugStats.y = state.y;
+      debugStats.z = state.z;
+      debugStats.speed = Math.hypot(state.vx, state.vz);
+      debugStats.grounded = state.grounded;
+      debugStats.cameraMode = director.activeId() ?? "-";
+      debugStats.cameraBlend = director.blendWeight();
+    }
   });
 
   const height = cfg.locomotion.playerHeight;

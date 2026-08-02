@@ -2,10 +2,15 @@ import { useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 
 import { createColliderRegistry } from "./collision/colliderRegistry";
+import DebugProbe from "./debug/DebugProbe";
+import { isDebugEnabled } from "./debug/debugStats";
 import { useKeyboard } from "./input/useKeyboard";
 import { usePointerOrbit } from "./input/usePointerOrbit";
 import { world } from "./config/worldConfig";
 import Player from "./Player";
+
+/** Read once, so the probe is either mounted for the session or never. */
+const DEBUG = isDebugEnabled();
 
 interface Props {
   /** The world's scene graph, given the registry to declare collision with. */
@@ -54,6 +59,7 @@ export default function Engine({ children }: Props) {
 
       {children(registry)}
       <Player colliderRegistry={registry} />
+      {DEBUG && <DebugProbe colliderRegistry={registry} />}
     </Canvas>
   );
 }
