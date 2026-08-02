@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { create } from "zustand";
 
 import { SEND_INTERVAL_MS } from "../../../protocol/limits";
-import type { ActorState, ServerFrame } from "../../../protocol/messages";
+import type { ActorState, ServerFrame, WorldOp } from "../../../protocol/messages";
 import { parseFrame, roomUrl, shouldSend } from "../../../protocol/messages";
 import type { Sample } from "./clockSync";
 import { addSample, bestOffset, sampleFrom } from "./clockSync";
@@ -53,6 +53,18 @@ export const useRealtimeStore = create<RealtimeStore>((set) => ({
 /** Everyone else, as mutable data the frame loop reads directly. */
 export const actors = createActorRegistry();
 
+/**
+ * Where inbound world changes are delivered.
+ *
+ * Set by whoever owns the placement store. They land in its pending queue and
+ * are applied by the commit phase at the top of a frame, never mid-frame — so
+ * a crate cannot appear between the ground ray and the wall sweep that were
+ * both meant to see one unchanging world.
+ */
+export const worldSink = {
+  apply: (() => {}) as (ops: readonly WorldOp[]) => void,
+};
+
 /** How often the client re-measures the clock. */
 const PING_INTERVAL_MS = 15_000;
 
@@ -73,6 +85,14 @@ export const realtime = {
   sendState: (() => {}) as (state: ActorState, now: number) => void,
   /** Say something. Ignored while running solo. */
   say: (() => {}) as (text: string, username: string) => void,
+  /**
+   * Ask to build. What comes back is an operation like any other, carrying
+   * the identifier the relay assigned — so nothing is drawn optimistically
+   * and a refusal needs no rollback.
+   */
+  build: (() => {}) as (place: unknown) => void,
+  /** Ask to remove something. Honoured only for your own work. */
+  unbuild: (() => {}) as (id: string) => void,
 };
 
 export interface RealtimeOptions {
@@ -130,6 +150,12 @@ export function useRealtime({ host, playerId }: RealtimeOptions): void {
     realtime.say = (text, username) => {
       send({ type: "chat", text, username });
     };
+    realtime.build = (place) => {
+      send({ type: "build", place });
+    };
+    realtime.unbuild = (id) => {
+      send({ type: "unbuild", id });
+    };
 
     const ingest = (frame: ServerFrame, now: number): void => {
       if (frame.type === "hello") {
@@ -143,6 +169,15 @@ export function useRealtime({ host, playerId }: RealtimeOptions): void {
       if (frame.type === "pong") {
         samples = addSample(samples, sampleFrom(frame.t, now, frame.s));
         realtime.offset = bestOffset(samples);
+        return;
+      }
+      if (frame.type === "world") {
+        worldSink.apply(frame.ops);
+        return;
+      }
+      if (frame.type === "refused") {
+        // Only the asker is told, and only so a build UI can say so. It is
+        // not an error: a refusal is the system working.
         return;
       }
       if (applyFrame(actors, frame, now)) {
@@ -214,6 +249,8 @@ export function useRealtime({ host, playerId }: RealtimeOptions): void {
       clearInterval(pruneTimer);
       realtime.sendState = () => {};
       realtime.say = () => {};
+      realtime.build = () => {};
+      realtime.unbuild = () => {};
       realtime.offset = null;
       // 1000 is a normal close, which the retry rule reads as "do not come
       // back" — correct here, since the component is going away.

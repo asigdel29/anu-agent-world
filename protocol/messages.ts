@@ -1,5 +1,6 @@
 import { MAX_CHAT_LENGTH, MAX_FRAME_BYTES, MAX_USERNAME_LENGTH, ROOM } from "./limits";
 import { sanitizeId } from "./ids";
+import type { Placement } from "./placement";
 
 /**
  * The frames the client and the relay exchange.
@@ -36,7 +37,26 @@ export interface ActorRecord extends ActorState {
 export type ClientFrame =
   | ({ readonly type: "state" } & ActorState)
   | { readonly type: "chat"; readonly username: string; readonly text: string }
-  | { readonly type: "ping"; readonly t: number };
+  | { readonly type: "ping"; readonly t: number }
+  /**
+   * A request to build. The payload stays `unknown` on purpose: this module
+   * decides what a *frame* is, and the placement module decides what a
+   * *placement* is. Narrowing it here would put the rules in two places.
+   */
+  | { readonly type: "build"; readonly place: unknown }
+  | { readonly type: "unbuild"; readonly id: string };
+
+/**
+ * A change to what has been built.
+ *
+ * A removal carries the revision it removes, not just an identifier. Without
+ * it the client's monotonic rule — which exists so a message overtaken in
+ * flight cannot resurrect a deleted object — has nothing to compare against
+ * and silently discards the removal instead.
+ */
+export type WorldOp =
+  | { readonly t: "upsert"; readonly place: Placement }
+  | { readonly t: "remove"; readonly id: string; readonly rev: number };
 
 /** Frames the relay may send. */
 export type ServerFrame =
@@ -52,13 +72,26 @@ export type ServerFrame =
       readonly username: string;
       readonly text: string;
     }
-  | { readonly type: "snapshot"; readonly actors: readonly ActorRecord[] };
+  | { readonly type: "snapshot"; readonly actors: readonly ActorRecord[] }
+  /** Everything currently built, sent once on connect. */
+  | { readonly type: "world"; readonly ops: readonly WorldOp[] }
+  /** Why a build request was refused, sent only to whoever made it. */
+  | { readonly type: "refused"; readonly reason: string };
 
 /** The frame types a client is allowed to send. Anything else is dropped. */
-export const CLIENT_FRAME_TYPES: ReadonlySet<string> = new Set(["state", "chat", "ping"]);
+export const CLIENT_FRAME_TYPES: ReadonlySet<string> = new Set([
+  "state",
+  "chat",
+  "ping",
+  "build",
+  "unbuild",
+]);
 
 /** Longest an action or character name may be. */
 const MAX_ANIMATION_NAME_LENGTH = 32;
+
+/** Longest a placement identifier may be. */
+const MAX_PLACEMENT_ID_LENGTH = 24;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   // An array is an object, so excluding it here is not pedantry: without the
@@ -145,6 +178,18 @@ export function readClientFrame(frame: Record<string, unknown>): ClientFrame | n
       username: clampText(frame["username"], MAX_USERNAME_LENGTH),
       text,
     };
+  }
+
+  if (type === "build") {
+    // Passed along unnarrowed: what a placement is belongs to the placement
+    // module, and duplicating those rules here is how two validators start
+    // disagreeing.
+    return { type: "build", place: frame["place"] };
+  }
+
+  if (type === "unbuild") {
+    const id = sanitizeId(frame["id"], MAX_PLACEMENT_ID_LENGTH);
+    return id ? { type: "unbuild", id } : null;
   }
 
   if (!isFiniteNumber(frame["t"])) return null;
