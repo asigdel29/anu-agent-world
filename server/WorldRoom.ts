@@ -101,11 +101,15 @@ export class WorldRoom {
     }));
   }
 
-  async fetch(request: Request): Promise<Response> {
-    const { 0: client, 1: server } = new WebSocketPair();
-    const url = new URL(request.url);
-    const id = connectionId(url.searchParams.get("pid"), () => crypto.randomUUID());
-
+  /**
+   * Admit a socket to the room.
+   *
+   * Separated from `fetch` so that everything the room decides can be driven
+   * by a test. What remains in `fetch` is four lines of platform plumbing: a
+   * socket pair and a 101 response, neither of which has an opinion.
+   */
+  async welcome(server: WebSocket, requestedId: unknown): Promise<void> {
+    const id = connectionId(requestedId, () => crypto.randomUUID());
     this.state.acceptWebSocket(server, [id]);
 
     const now = Date.now();
@@ -114,9 +118,15 @@ export class WorldRoom {
     // rendered a frame before agreeing on it would show the wrong sky.
     this.send(server, { type: "hello", id, s: now });
     this.broadcast({ type: "join", id, ts: now }, server);
+    // A newcomer is never in its own snapshot: it would arrive to find itself
+    // standing in the world as a second, un-driven body.
     const actors = (await this.freshActors(now)).filter((a) => a.id !== id);
     this.send(server, { type: "snapshot", actors });
+  }
 
+  async fetch(request: Request): Promise<Response> {
+    const { 0: client, 1: server } = new WebSocketPair();
+    await this.welcome(server, new URL(request.url).searchParams.get("pid"));
     return new Response(null, { status: 101, webSocket: client });
   }
 
