@@ -54,6 +54,7 @@ function flatGround(): SurfaceQuery {
   return {
     groundAt: () => 0,
     sweep: () => false,
+    ray: () => false,
   };
 }
 
@@ -62,6 +63,7 @@ function groundWithVoid(edgeZ: number): SurfaceQuery {
   return {
     groundAt: (_x, z) => (z < edgeZ ? 0 : null),
     sweep: () => false,
+    ray: () => false,
   };
 }
 
@@ -85,6 +87,7 @@ function singleStep(atZ: number, riseHeight: number): SurfaceQuery {
       out.normalZ = -1;
       return true;
     },
+    ray: () => false,
   };
 }
 
@@ -102,6 +105,7 @@ function wall(atZ: number): SurfaceQuery {
       out.normalZ = -1;
       return true;
     },
+    ray: () => false,
   };
 }
 
@@ -206,6 +210,7 @@ describe("stepLocomotion", () => {
       const query: SurfaceQuery = {
         groundAt: (_x, z) => (z >= 1 ? 0 : 0.6),
         sweep: () => false,
+        ray: () => false,
       };
       simulate(state, FORWARD, query, 1);
       expect(state.z).toBeGreaterThan(1);
@@ -218,6 +223,7 @@ describe("stepLocomotion", () => {
       const query: SurfaceQuery = {
         groundAt: (_x, z) => (z >= 1 ? 0 : 3),
         sweep: () => false,
+        ray: () => false,
       };
       // Sample immediately after crossing the lip, before it lands again.
       let wentAirborne = false;

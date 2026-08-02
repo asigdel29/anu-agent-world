@@ -73,6 +73,28 @@ export interface SurfaceQuery {
     radius: number,
     out: SweepHit,
   ): boolean;
+
+  /**
+   * Cast a ray in an arbitrary direction, writing the nearest hit into `out`.
+   *
+   * Movement only ever needs the two questions above, but the camera has to
+   * test a diagonal line from its subject to where it would like to sit, which
+   * is neither straight down nor horizontal.
+   *
+   * @param layer restricts the test; the camera asks for structures alone, so
+   *              that passing shrubbery does not haul the view inward
+   */
+  ray(
+    fromX: number,
+    fromY: number,
+    fromZ: number,
+    dirX: number,
+    dirY: number,
+    dirZ: number,
+    far: number,
+    layer: "all" | "structure",
+    out: SweepHit,
+  ): boolean;
 }
 
 /**
@@ -105,6 +127,28 @@ export function createSurfaceQuery(registry: ColliderRegistry): SurfaceQuery {
       raycaster.far = distance + radius;
 
       const hits = raycaster.intersectObjects(registry.all() as never[], true);
+      const first = hits[0];
+      if (!first) return false;
+
+      out.distance = first.distance;
+      const normal = first.normal;
+      out.normalX = normal ? normal.x : 0;
+      out.normalY = normal ? normal.y : 1;
+      out.normalZ = normal ? normal.z : 0;
+      return true;
+    },
+
+    ray(fromX, fromY, fromZ, dirX, dirY, dirZ, far, layer, out) {
+      const length = Math.hypot(dirX, dirY, dirZ);
+      if (length === 0) return false;
+
+      origin.set(fromX, fromY, fromZ);
+      direction.set(dirX / length, dirY / length, dirZ / length);
+      raycaster.set(origin, direction);
+      raycaster.far = far;
+
+      const targets = layer === "all" ? registry.all() : registry.layer("structure");
+      const hits = raycaster.intersectObjects(targets as never[], true);
       const first = hits[0];
       if (!first) return false;
 
