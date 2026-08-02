@@ -1,0 +1,43 @@
+@use "../styles/tokens" as *;
+
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: $surface;
+  opacity: 1;
+  transition: opacity $duration-scene $ease;
+}
+
+.leaving {
+  opacity: 0;
+  // Once fading, it must not swallow the first clicks on the world behind it.
+  pointer-events: none;
+}
+
+.card {
+  @include panel;
+
+  padding: 1.25rem 1.5rem;
+  min-width: 15rem;
+  text-align: center;
+}
+
+.title {
+  @include quiet-display;
+
+  margin: 0;
+  font-family: $font-ui;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  color: $ink;
+}
+
+.subtitle {
+  margin: 0.4rem 0 0;
+  font-family: $font-ui;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+  color: $ink-subtle;
+}

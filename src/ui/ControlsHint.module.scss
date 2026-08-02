@@ -1,0 +1,48 @@
+@use "../styles/tokens" as *;
+
+.hint {
+  @include panel;
+
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.9rem;
+  transform: translateX(-50%);
+  font-family: $font-ui;
+  font-size: 0.82rem;
+  letter-spacing: 0.01em;
+  color: $ink-muted;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity $duration-scene $ease;
+}
+
+.leaving {
+  opacity: 0;
+}
+
+.divider {
+  width: 1px;
+  height: 0.9rem;
+  background: $hairline;
+}
+
+kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  margin-right: 0.15rem;
+  padding: 0 0.35rem;
+  border-radius: $radius-small;
+  background: $surface;
+  box-shadow: $ring;
+  font-family: $font-ui;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: $ink;
+}

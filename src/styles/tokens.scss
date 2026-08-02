@@ -1,0 +1,80 @@
+// The visual language, defined once.
+//
+// Taken from a design whose defining move is that edges are carried by a
+// one-pixel hairline ring rather than by shadow. Shadows exist, but they are
+// warm-grey and whisper-soft: they lift a surface off the page instead of
+// drawing its boundary. Getting that the wrong way round is what makes an
+// interface look heavy.
+//
+// Type is set quiet. Weights are 400 and 500 almost everywhere, display sizes
+// are light rather than bold, and casing is sentences throughout — the source
+// this follows uses uppercase exactly once in its entire stylesheet, in a
+// utility nothing calls.
+
+// ---------------------------------------------------------------- surfaces
+$surface: #f9f7f6; // the world's background is this colour too: no horizon
+$surface-raised: #f0edea;
+$surface-sunken: #e9e7e4;
+$surface-night: #1b1918;
+
+// -------------------------------------------------------------------- ink
+$ink: #1a1a1a;
+$ink-muted: #595959;
+$ink-subtle: #868686;
+
+// ----------------------------------------------------------------- accent
+$accent: #ff4f38;
+$accent-indicator: #fd524f;
+
+// ------------------------------------------------------------------ world
+// Shared with the 3D scene so the interface and the world agree.
+$grass: #a1bf79;
+$soil: #805749;
+$stone: #98837f;
+$water: #64a5c8;
+$outline: #4e3c40; // warm near-black, never pure
+
+// ------------------------------------------------------------------ shape
+$radius-card: 5px; // the signature radius
+$radius-small: 2px;
+$radius-modal: 12px;
+$radius-pill: 9999px;
+
+// The ring is the edge; the shadow only lifts.
+$ring: 0 0 0 1px rgb(0 0 0 / 7%);
+$shadow-card: #{$ring}, 0 7px 20px rgb(32 32 32 / 5%);
+$shadow-lifted: #{$ring}, 0 12px 36px rgb(32 32 32 / 12%);
+$hairline: rgb(0 0 0 / 9%);
+
+// ----------------------------------------------------------------- motion
+// Hard ease-out: quick off the mark, long settle.
+$ease: cubic-bezier(0.23, 1, 0.32, 1);
+$duration-micro: 0.15s;
+$duration-scene: 0.5s;
+
+// Islands drift: tiny amplitude, long period.
+$float-period: 6.4s;
+$float-ease: cubic-bezier(0.45, 0, 0.55, 1);
+
+// ------------------------------------------------------------------- type
+$font-ui: system-ui, -apple-system, "Segoe UI", sans-serif;
+$font-mono: ui-monospace, Menlo, Consolas, monospace;
+
+@mixin panel {
+  background: $surface-raised;
+  border-radius: $radius-card;
+  box-shadow: $shadow-card;
+  color: $ink;
+}
+
+@mixin quiet-display {
+  // Display type is set light, never bold.
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.04;
+  text-wrap: balance;
+}
+
+@mixin numeric {
+  font-variant-numeric: tabular-nums;
+}
