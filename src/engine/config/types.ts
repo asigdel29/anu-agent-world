@@ -177,6 +177,23 @@ export interface AtmosphereConfig {
     readonly groundColor: string;
     readonly intensity: number;
   };
+  /**
+   * How much an island drifts, or null for a world that holds still.
+   *
+   * Small enough to read as breathing rather than as motion. That is the
+   * whole effect: an island that visibly moves is a platforming hazard, and
+   * one that is perfectly still looks printed rather than suspended.
+   */
+  readonly drift: {
+    /** Vertical amplitude, in world units. */
+    readonly rise: number;
+    /** Lateral amplitude, in world units. */
+    readonly sway: number;
+    /** Roll amplitude, in radians. */
+    readonly roll: number;
+    /** Seconds for one full cycle. */
+    readonly periodSec: number;
+  } | null;
 }
 
 export interface InteractionConfig {

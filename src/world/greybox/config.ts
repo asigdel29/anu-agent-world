@@ -80,6 +80,10 @@ export const greyboxConfig: WorldConfig = {
     background: { kind: "color", color: "#f9f7f6" },
     sun: { direction: [-0.5, -1, -0.35], color: "#fff2e0", intensity: 1.6 },
     ambient: { skyColor: "#dfe9ff", groundColor: "#c9bfb4", intensity: 1.1 },
+    // A couple of centimetres against a character 1.8 tall, over six and a
+    // half seconds. Read as breathing rather than as motion; the validator
+    // holds the resulting speed well below what the ground resolve absorbs.
+    drift: { rise: 0.045, sway: 0.022, roll: 0.0021, periodSec: 6.4 },
   },
 
   interaction: { proximityRange: 3.2, pointerMaxRange: 40 },

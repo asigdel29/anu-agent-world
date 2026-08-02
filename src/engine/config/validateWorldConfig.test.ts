@@ -59,6 +59,7 @@ function baseConfig(): WorldConfig {
       background: { kind: "color", color: "#f9f7f6" },
       sun: { direction: [-0.5, -1, -0.35], color: "#fff2e0", intensity: 2 },
       ambient: { skyColor: "#dfe9ff", groundColor: "#c9bfb4", intensity: 1.2 },
+      drift: { rise: 0.045, sway: 0.022, roll: 0.0021, periodSec: 6.4 },
     },
     interaction: { proximityRange: 3.2, pointerMaxRange: 40 },
     streaming: {
@@ -265,5 +266,53 @@ describe("validateWorldConfig", () => {
       locomotion: { ...base.locomotion, maxStepHeight: 1.2 },
     };
     expect(validateWorldConfig(cfg).length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("island drift", () => {
+  it("accepts a drift small enough to go unnoticed", () => {
+    expect(validateWorldConfig(baseConfig())).toEqual([]);
+  });
+
+  it("accepts a world that holds still", () => {
+    const cfg = baseConfig();
+    expect(validateWorldConfig({ ...cfg, atmosphere: { ...cfg.atmosphere, drift: null } })).toEqual(
+      [],
+    );
+  });
+
+  it("refuses a drift the character would feel", () => {
+    // The failure this prevents is not a fall but a world that feels subtly
+    // wrong to stand still in, which is far harder to trace back. The check
+    // is on distance moved within one frame: a speed compared against a
+    // tolerance measured in units is a category error that rejects a calm
+    // island and admits a violent short-period one.
+    const cfg = baseConfig();
+    const problems = validateWorldConfig({
+      ...cfg,
+      atmosphere: {
+        ...cfg.atmosphere,
+        drift: { rise: 1.2, sway: 0.02, roll: 0.002, periodSec: 3 },
+      },
+    });
+    expect(problems.join(" ")).toContain("in a single\n            frame".replace(/\s+/g, " "));
+  });
+
+  it("refuses a period of zero", () => {
+    const cfg = baseConfig();
+    const problems = validateWorldConfig({
+      ...cfg,
+      atmosphere: { ...cfg.atmosphere, drift: { ...cfg.atmosphere.drift!, periodSec: 0 } },
+    });
+    expect(problems.join(" ")).toContain("periodSec");
+  });
+
+  it("refuses a negative amplitude", () => {
+    const cfg = baseConfig();
+    const problems = validateWorldConfig({
+      ...cfg,
+      atmosphere: { ...cfg.atmosphere, drift: { ...cfg.atmosphere.drift!, rise: -1 } },
+    });
+    expect(problems.join(" ")).toContain("must not be negative");
   });
 });

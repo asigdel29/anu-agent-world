@@ -13,7 +13,7 @@ import { debugStats, isDebugEnabled } from "./debug/debugStats";
 import { consumeJump, inputState, resolveMoveDirection } from "./input/inputState";
 import { orbitState } from "./input/usePointerOrbit";
 import type { MoveIntent, MoveLimits } from "./locomotion/moveController";
-import { createMoveState, stepLocomotion } from "./locomotion/moveController";
+import { MAX_STEP_SEC, createMoveState, stepLocomotion } from "./locomotion/moveController";
 import { realtime } from "./net/useRealtime";
 import type { PlacementSnapshot, PlacementStore } from "./placements/placementStore";
 import { subjectPosition } from "./streaming/chunkStore";
@@ -33,9 +33,6 @@ import { OUTLINE_INK, OUTLINE_MARGIN } from "./assets/outline";
  * that also owned raycasting, camera maths, interaction scanning, footsteps,
  * and a branch for a second camera owner. Everything here delegates.
  */
-
-/** Longest frame the simulation will integrate in one go. */
-const MAX_STEP_SEC = 1 / 20;
 
 /** Read once: an overlay that appears mid-session is a distraction. */
 const DEBUG = isDebugEnabled();
