@@ -4,6 +4,8 @@ import { configureWorld } from "./engine/config/worldConfig";
 import { isDebugEnabled } from "./engine/debug/debugStats";
 import { greyboxCatalog, greyboxPlacementLimits } from "./world/greybox/catalog";
 import { greyboxConfig } from "./world/greybox/config";
+import ControlsHint from "./ui/ControlsHint";
+import LoadingScreen from "./ui/LoadingScreen";
 
 // The 3D stack is the only lazy boundary in the app: the DOM overlay paints
 // while three.js and the R3F vendor chunks download in parallel.
@@ -21,6 +23,10 @@ const DEBUG = isDebugEnabled();
 export default function App() {
   return (
     <>
+      {/* Overlays mount ahead of the world so the interface paints while the
+          3D chunks are still downloading. */}
+      <LoadingScreen />
+      <ControlsHint />
       {DEBUG && (
         <Suspense fallback={null}>
           <DebugHUD />
