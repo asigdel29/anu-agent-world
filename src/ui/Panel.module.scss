@@ -1,0 +1,78 @@
+@use "../styles/tokens" as *;
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  // Barely there. The world behind is still running and still worth seeing;
+  // dimming it to unreadability would make the panel a page instead.
+  background: rgb(26 26 26 / 12%);
+}
+
+.panel {
+  @include panel;
+
+  width: min(34rem, 100%);
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 1.4rem 1.5rem 1.5rem;
+  font-family: $font-ui;
+  color: $ink;
+
+  p {
+    margin: 0 0 0.85rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: $ink-muted;
+  }
+
+  p:last-of-type {
+    margin-bottom: 0;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  h2 {
+    margin: 0;
+    // Sentence case, set light and quiet: display type in this language never
+    // shouts, and uppercase appears exactly once in the whole reference.
+    @include quiet-display;
+    font-size: 1.35rem;
+  }
+}
+
+.close {
+  flex: none;
+  padding: 0.25rem 0.55rem;
+  border: 0;
+  border-radius: $radius-small;
+  background: $surface-sunken;
+  box-shadow: $ring;
+  font-family: $font-ui;
+  font-size: 0.75rem;
+  color: $ink-subtle;
+  cursor: pointer;
+  transition: color $duration-micro $ease;
+
+  &:hover {
+    color: $ink;
+  }
+}
+
+.link {
+  display: inline-block;
+  margin-top: 0.4rem;
+  color: $accent;
+  font-size: 0.9rem;
+  text-decoration: none;
+  border-bottom: 1px solid currentcolor;
+}

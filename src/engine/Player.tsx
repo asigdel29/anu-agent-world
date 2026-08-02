@@ -245,7 +245,7 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
           already governs both dimensions, so one factor keeps the margin even. */}
       <mesh
         position={[0, height / 2, 0]}
-        scale={capsuleHullScale(radius)}
+        scale={capsuleHullScale(radius, height)}
         raycast={NEVER_RAYCAST}
       >
         <capsuleGeometry args={[radius, height - radius * 2, 4, 12]} />
