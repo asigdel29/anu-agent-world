@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react";
 
 import { configureWorld } from "./engine/config/worldConfig";
 import { isDebugEnabled } from "./engine/debug/debugStats";
+import { greyboxCatalog, greyboxPlacementLimits } from "./world/greybox/catalog";
 import { greyboxConfig } from "./world/greybox/config";
 
 // The 3D stack is the only lazy boundary in the app: the DOM overlay paints
@@ -26,7 +27,7 @@ export default function App() {
         </Suspense>
       )}
       <Suspense fallback={null}>
-        <Engine>
+        <Engine catalog={greyboxCatalog} placementLimits={greyboxPlacementLimits}>
           {(registry) => <GreyBoxScene colliderRegistry={registry} />}
         </Engine>
       </Suspense>

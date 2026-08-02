@@ -1,8 +1,13 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 
 import { createColliderRegistry } from "./collision/colliderRegistry";
+import type { PropCatalog } from "./placements/catalogTypes";
+import PlacementLayer from "./placements/PlacementLayer";
+import type { PlacementLimits } from "./placements/placementOps";
+import { createPlacementStore } from "./placements/placementStore";
 import DebugProbe from "./debug/DebugProbe";
+import { attachDevConsole } from "./debug/devConsole";
 import { isDebugEnabled } from "./debug/debugStats";
 import { useKeyboard } from "./input/useKeyboard";
 import { usePointerOrbit } from "./input/usePointerOrbit";
@@ -15,6 +20,10 @@ const DEBUG = isDebugEnabled();
 interface Props {
   /** The world's scene graph, given the registry to declare collision with. */
   children: (registry: ReturnType<typeof createColliderRegistry>) => React.ReactNode;
+  /** The kinds this world allows to be built. */
+  catalog: PropCatalog;
+  /** What a placement in this world must satisfy. */
+  placementLimits: PlacementLimits;
 }
 
 /**
@@ -24,12 +33,25 @@ interface Props {
  * being written here, which is what keeps this component free of any
  * particular world's facts.
  */
-export default function Engine({ children }: Props) {
+export default function Engine({ children, catalog, placementLimits }: Props) {
   const cfg = useMemo(() => world(), []);
   const registry = useMemo(() => createColliderRegistry(), []);
+  const placements = useMemo(
+    () => createPlacementStore(catalog, placementLimits, cfg.placements.cellSize),
+    [catalog, placementLimits, cfg],
+  );
+  const [snapshot, setSnapshot] = useState(() => placements.snapshot());
 
   useKeyboard();
   usePointerOrbit(cfg.camera);
+
+  // The network path does not exist yet, but the world already accepts
+  // changes; there is no reason to wait for a socket to find out whether a
+  // placed crate is something a character can climb.
+  useEffect(() => {
+    if (!DEBUG) return undefined;
+    return attachDevConsole(placements, catalog);
+  }, [placements, catalog]);
 
   const background =
     cfg.atmosphere.background.kind === "color"
@@ -58,7 +80,12 @@ export default function Engine({ children }: Props) {
       )}
 
       {children(registry)}
-      <Player colliderRegistry={registry} />
+      <PlacementLayer catalog={catalog} snapshot={snapshot} />
+      <Player
+        colliderRegistry={registry}
+        placements={placements}
+        onWorldChanged={setSnapshot}
+      />
       {DEBUG && <DebugProbe colliderRegistry={registry} />}
     </Canvas>
   );

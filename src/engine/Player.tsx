@@ -3,6 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import type { Group } from "three";
 
 import type { ColliderRegistry } from "./collision/colliderRegistry";
+import { composeSurfaceQuery } from "./collision/placementCollision";
 import { createSurfaceQuery } from "./collision/surfaceQuery";
 import type { CameraContext } from "./camera/cameraDirector";
 import { createCameraDirector, createCameraPose } from "./camera/cameraDirector";
@@ -12,6 +13,7 @@ import { consumeJump, inputState, resolveMoveDirection } from "./input/inputStat
 import { orbitState } from "./input/usePointerOrbit";
 import type { MoveIntent, MoveLimits } from "./locomotion/moveController";
 import { createMoveState, stepLocomotion } from "./locomotion/moveController";
+import type { PlacementSnapshot, PlacementStore } from "./placements/placementStore";
 import { subjectPosition } from "./streaming/chunkStore";
 import { world } from "./config/worldConfig";
 
@@ -45,14 +47,26 @@ interface Scratch {
 
 interface Props {
   colliderRegistry: ColliderRegistry;
+  placements: PlacementStore;
+  /** Told when the built world changed, so the renderer can pick it up. */
+  onWorldChanged: (snapshot: PlacementSnapshot) => void;
 }
 
-export default function Player({ colliderRegistry }: Props) {
+export default function Player({ colliderRegistry, placements, onWorldChanged }: Props) {
   const cfg = useMemo(() => world(), []);
   const camera = useThree((state) => state.camera);
   const group = useRef<Group>(null);
 
-  const query = useMemo(() => createSurfaceQuery(colliderRegistry), [colliderRegistry]);
+  // Terrain and placements answer as one oracle, so movement never learns
+  // that placements exist. The hash is read through a callback rather than
+  // captured, so this survives every commit.
+  const query = useMemo(
+    () =>
+      composeSurfaceQuery(createSurfaceQuery(colliderRegistry), () =>
+        placements.snapshot().hash,
+      ),
+    [colliderRegistry, placements],
+  );
   const director = useMemo(() => createCameraDirector(), []);
 
   const limits = useMemo<MoveLimits>(
@@ -106,6 +120,10 @@ export default function Player({ colliderRegistry }: Props) {
     // in a single step.
     const dt = Math.min(rawDelta, MAX_STEP_SEC);
     if (director.activeId() === null) director.push(createFollowMode(), ctx);
+
+    // 0. Apply anything that arrived since the last frame, before a single ray
+    //    is cast. Everything below reads one unchanging world.
+    if (placements.commitPending(Date.now())) onWorldChanged(placements.snapshot());
 
     // 1. Resolve input against where the camera is looking, so "forward" means
     //    away from the viewer rather than along a fixed world axis.
