@@ -11,6 +11,8 @@ import { attachDevConsole } from "./debug/devConsole";
 import { isDebugEnabled } from "./debug/debugStats";
 import { useKeyboard } from "./input/useKeyboard";
 import { usePointerOrbit } from "./input/usePointerOrbit";
+import { useRealtime } from "./net/useRealtime";
+import { visitorId } from "./net/visitorId";
 import { world } from "./config/worldConfig";
 import Player from "./Player";
 
@@ -44,6 +46,10 @@ export default function Engine({ children, catalog, placementLimits }: Props) {
 
   useKeyboard();
   usePointerOrbit(cfg.camera);
+  // No relay host configured is a supported mode, not a misconfiguration:
+  // the world stays fully explorable and merely empty.
+  const playerId = useMemo(() => visitorId(), []);
+  useRealtime({ host: import.meta.env.VITE_RELAY_HOST, playerId });
 
   // The network path does not exist yet, but the world already accepts
   // changes; there is no reason to wait for a socket to find out whether a
