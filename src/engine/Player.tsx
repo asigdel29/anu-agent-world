@@ -19,7 +19,7 @@ import type { PlacementSnapshot, PlacementStore } from "./placements/placementSt
 import { subjectPosition } from "./streaming/chunkStore";
 import { world } from "./config/worldConfig";
 import { toonRamp } from "./assets/toonRamp";
-import { OUTLINE_INK, OUTLINE_MARGIN } from "./assets/outline";
+import { NEVER_RAYCAST, OUTLINE_INK, capsuleHullScale } from "./assets/outline";
 
 /**
  * The character, and the one ordered pass over everything that moves.
@@ -201,7 +201,11 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
       </mesh>
       {/* The line. A capsule grows uniformly rather than per axis: its radius
           already governs both dimensions, so one factor keeps the margin even. */}
-      <mesh position={[0, height / 2, 0]} scale={1 + (OUTLINE_MARGIN * 2) / radius}>
+      <mesh
+        position={[0, height / 2, 0]}
+        scale={capsuleHullScale(radius)}
+        raycast={NEVER_RAYCAST}
+      >
         <capsuleGeometry args={[radius, height - radius * 2, 4, 12]} />
         <meshBasicMaterial color={OUTLINE_INK} side={BackSide} depthWrite={false} />
       </mesh>

@@ -8,7 +8,7 @@ import { isSpeaking } from "./actorRegistry";
 import { LERP_SPEED, dampFraction, stepAngle } from "./remoteInterp";
 import { actors } from "./useRealtime";
 import { toonRamp } from "../assets/toonRamp";
-import { OUTLINE_INK, OUTLINE_MARGIN } from "../assets/outline";
+import { NEVER_RAYCAST, OUTLINE_INK, capsuleHullScale } from "../assets/outline";
 
 /**
  * One other body in the world.
@@ -74,7 +74,11 @@ export default function Actor({ id, height, radius }: Props) {
       </mesh>
       {/* The line. A capsule grows uniformly rather than per axis: its radius
           already governs both dimensions, so one factor keeps the margin even. */}
-      <mesh position={[0, height / 2, 0]} scale={1 + (OUTLINE_MARGIN * 2) / radius}>
+      <mesh
+        position={[0, height / 2, 0]}
+        scale={capsuleHullScale(radius)}
+        raycast={NEVER_RAYCAST}
+      >
         <capsuleGeometry args={[radius, height - radius * 2, 4, 12]} />
         <meshBasicMaterial color={OUTLINE_INK} side={BackSide} depthWrite={false} />
       </mesh>

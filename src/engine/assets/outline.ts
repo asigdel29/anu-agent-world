@@ -23,6 +23,19 @@
  * cannot be detected without looking at it.
  */
 
+/**
+ * An outline is decoration and must be invisible to every query.
+ *
+ * This is not an optimisation. A chunk with no `colliders` subtree registers
+ * whole, so anything added to its subtree becomes collision geometry — and a
+ * hull is drawn with its faces reversed, which means a ray that passes
+ * cleanly by the real object reports a hit on the inside of its shell. The
+ * first version of this shipped without the guard and pulled the camera to
+ * its occlusion minimum: the world was intact, correctly shaded, and framed
+ * from two units away with no error anywhere.
+ */
+export const NEVER_RAYCAST = (): void => {};
+
 /** The outline colour: warm near-black, never pure black. */
 export const OUTLINE_INK = "#4e3c40";
 
@@ -33,6 +46,18 @@ export const OUTLINE_INK = "#4e3c40";
  * about a pixel at the distances the follow camera holds.
  */
 export const OUTLINE_MARGIN = 0.022;
+
+/**
+ * Scale that grows a capsule by a fixed margin all round.
+ *
+ * A capsule's radius governs both its girth and its domed ends, so one
+ * uniform factor keeps the margin even. Note the radius is a *half* extent,
+ * unlike the box sizes below — dividing the margin by it once rather than
+ * twice is the difference between the intended line and one twice as thick.
+ */
+export function capsuleHullScale(radius: number, margin: number = OUTLINE_MARGIN): number {
+  return radius > 0 ? 1 + margin / radius : 1;
+}
 
 /**
  * Per-axis scale that grows a box by a fixed margin on every side.
