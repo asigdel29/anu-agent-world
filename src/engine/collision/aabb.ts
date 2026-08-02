@@ -68,9 +68,11 @@ export function topFaceBelow(box: Aabb, x: number, z: number, fromY: number): nu
 /**
  * Distance along a horizontal ray to a box, or null when it misses.
  *
- * The slab method, restricted to the horizontal plane and to the band of
- * heights the body occupies — a box entirely above or below the body is not
- * something the body can walk into.
+ * The slab method, restricted to the horizontal plane. `fromY` is the height
+ * of one ray, not the foot of a body: callers cast several rays at different
+ * heights down the body, which is what lets a low kerb and a railing top be
+ * told apart. A box that does not straddle this ray's height is not something
+ * this ray can hit.
  */
 export function sweepXZ(
   box: Aabb,
@@ -80,9 +82,8 @@ export function sweepXZ(
   dirX: number,
   dirZ: number,
   maxDistance: number,
-  bodyHeight: number,
 ): number | null {
-  if (box.maxY <= fromY || box.minY >= fromY + bodyHeight) return null;
+  if (fromY < box.minY || fromY > box.maxY) return null;
 
   let near = 0;
   let far = maxDistance;
