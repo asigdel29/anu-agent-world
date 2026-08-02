@@ -48,15 +48,27 @@ export const OUTLINE_INK = "#4e3c40";
 export const OUTLINE_MARGIN = 0.022;
 
 /**
- * Scale that grows a capsule by a fixed margin all round.
+ * Per-axis scale that grows a capsule by a fixed margin all round.
  *
- * A capsule's radius governs both its girth and its domed ends, so one
- * uniform factor keeps the margin even. Note the radius is a *half* extent,
- * unlike the box sizes below — dividing the margin by it once rather than
- * twice is the difference between the intended line and one twice as thick.
+ * A single uniform factor is the tempting answer and is wrong for the same
+ * reason a scale factor is wrong for boxes, only less obviously: it is even
+ * around the waist and proportional along the length, so a body nearly two
+ * metres tall gets a line at its ends around two and a half times the one at
+ * its sides. Beside an outlined box the difference is plainly visible, and it
+ * is the sort of inconsistency that reads as sloppiness without anyone being
+ * able to say why.
+ *
+ * Note the radius is a *half* extent while a box size is a full one, so the
+ * margin is divided by it once rather than twice.
  */
-export function capsuleHullScale(radius: number, margin: number = OUTLINE_MARGIN): number {
-  return radius > 0 ? 1 + margin / radius : 1;
+export function capsuleHullScale(
+  radius: number,
+  height: number,
+  margin: number = OUTLINE_MARGIN,
+): [number, number, number] {
+  const girth = radius > 0 ? (radius + margin) / radius : 1;
+  const length = height > 0 ? (height + margin * 2) / height : 1;
+  return [girth, length, girth];
 }
 
 /**

@@ -6,6 +6,7 @@ import { greyboxCatalog, greyboxPlacementLimits } from "./world/greybox/catalog"
 import { greyboxConfig } from "./world/greybox/config";
 import ControlsHint from "./ui/ControlsHint";
 import InteractPrompt from "./ui/InteractPrompt";
+import Panel from "./ui/Panel";
 import LoadingScreen from "./ui/LoadingScreen";
 
 // The 3D stack is the only lazy boundary in the app: the DOM overlay paints
@@ -29,6 +30,7 @@ export default function App() {
       <LoadingScreen />
       <ControlsHint />
       <InteractPrompt />
+      <Panel />
       {DEBUG && (
         <Suspense fallback={null}>
           <DebugHUD />
