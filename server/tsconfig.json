@@ -1,0 +1,16 @@
+{
+  // The Worker runs on workerd, not in a browser. It gets its own project
+  // because the two type environments genuinely conflict: DOM and the Workers
+  // runtime both declare WebSocket, Response, and Headers, and loading both
+  // gives duplicate-identifier errors rather than a merged view.
+  //
+  // Splitting them also buys the property that matters more: a `document` or
+  // `window` reference in server code is a compile error here, not a runtime
+  // surprise on a request that only happens under load.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["**/*.ts", "../protocol/**/*.ts", "../shared/**/*.ts"]
+}

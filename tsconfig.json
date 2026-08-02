@@ -21,5 +21,7 @@
 
     "allowJs": false
   },
-  "include": ["src", "protocol", "shared", "server", "*.config.ts"]
+  // `server` is deliberately absent: it type-checks under server/tsconfig.json
+  // against the Workers runtime rather than the DOM. See the note there.
+  "include": ["src", "protocol", "shared", "*.config.ts"]
 }
