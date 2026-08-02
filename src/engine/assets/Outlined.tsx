@@ -1,6 +1,6 @@
 import { BackSide } from "three";
 
-import { OUTLINE_INK, hullScale } from "./outline";
+import { NEVER_RAYCAST, OUTLINE_INK, hullScale } from "./outline";
 import { toonRamp } from "./toonRamp";
 
 /**
@@ -27,7 +27,7 @@ export default function OutlinedBox({ position, size, color, rotation }: Props) 
         <boxGeometry args={size} />
         <meshToonMaterial color={color} gradientMap={toonRamp()} />
       </mesh>
-      <mesh scale={hullScale(size)}>
+      <mesh scale={hullScale(size)} raycast={NEVER_RAYCAST}>
         <boxGeometry args={size} />
         {/* Depth writing off: the hull is behind its own object everywhere it
             matters, and writing depth would let one object's line punch a

@@ -6,7 +6,7 @@ import type { InstancedMesh } from "three";
 import type { PropKind } from "./catalogTypes";
 import type { Placement } from "./placementOps";
 import { toonRamp } from "../assets/toonRamp";
-import { OUTLINE_INK, OUTLINE_MARGIN, hullSize } from "../assets/outline";
+import { NEVER_RAYCAST, OUTLINE_INK, OUTLINE_MARGIN, hullSize } from "../assets/outline";
 
 /**
  * Every live instance of one kind, drawn in a single call.
@@ -141,6 +141,7 @@ export default function InstancedKind({ kind, instances, version }: Props) {
       ref={hull}
       args={[undefined, undefined, kind.maxInstances]}
       count={0}
+      raycast={NEVER_RAYCAST}
     >
       {kind.shape === "box" ? (
         <boxGeometry args={outlined} />
