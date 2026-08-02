@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+.vite/
+.wrangler/
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+*.blend1
+*.blend2
