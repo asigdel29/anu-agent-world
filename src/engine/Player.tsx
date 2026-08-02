@@ -13,6 +13,7 @@ import { consumeJump, inputState, resolveMoveDirection } from "./input/inputStat
 import { orbitState } from "./input/usePointerOrbit";
 import type { MoveIntent, MoveLimits } from "./locomotion/moveController";
 import { createMoveState, stepLocomotion } from "./locomotion/moveController";
+import { realtime } from "./net/useRealtime";
 import type { PlacementSnapshot, PlacementStore } from "./placements/placementStore";
 import { subjectPosition } from "./streaming/chunkStore";
 import { world } from "./config/worldConfig";
@@ -43,6 +44,8 @@ interface Scratch {
   direction: { x: number; z: number };
   ctx: CameraContext;
   pose: ReturnType<typeof createCameraPose>;
+  /** Reused so broadcasting does not allocate ten objects a second. */
+  wire: { pos: [number, number, number]; yaw: number; action: string; character: string };
 }
 
 interface Props {
@@ -108,12 +111,13 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
       query,
     },
     pose: createCameraPose(),
+    wire: { pos: [0, 0, 0], yaw: 0, action: "idle", character: "default" },
   };
 
   useFrame((_, rawDelta) => {
     const working = scratch.current;
     if (!working) return;
-    const { state, intent, direction, ctx, pose } = working;
+    const { state, intent, direction, ctx, pose, wire } = working;
 
     // A long frame — a tab restored from the background, a slow asset decode —
     // must not be integrated whole, or the character teleports through walls
@@ -147,7 +151,17 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
     subjectPosition.y = state.y;
     subjectPosition.z = state.z;
 
-    // 4. Publish what the camera needs, then let the director place it. Last,
+    // 4. Tell the relay where the character is. Throttled inside, so this is
+    //    called every frame and sends ten times a second; and a no-op while
+    //    running solo, so the loop never has to ask whether anyone is there.
+    wire.pos[0] = state.x;
+    wire.pos[1] = state.y;
+    wire.pos[2] = state.z;
+    wire.yaw = state.yaw;
+    wire.action = state.grounded ? (Math.hypot(state.vx, state.vz) > 0.1 ? "walk" : "idle") : "air";
+    realtime.sendState(wire, Date.now());
+
+    // 5. Publish what the camera needs, then let the director place it. Last,
     //    so the camera frames this frame's position rather than the previous.
     ctx.subjectX = state.x;
     ctx.subjectY = state.y;
