@@ -10,7 +10,8 @@ import type { CameraContext } from "./camera/cameraDirector";
 import { createCameraDirector, createCameraPose } from "./camera/cameraDirector";
 import { createFollowMode } from "./camera/modes/follow";
 import { debugStats, isDebugEnabled } from "./debug/debugStats";
-import { consumeJump, inputState, resolveMoveDirection } from "./input/inputState";
+import { consumeInteract, consumeJump, inputState, resolveMoveDirection } from "./input/inputState";
+import { chooseTarget, targets, useInteractionStore } from "./interaction/interactionStore";
 import { orbitState } from "./input/usePointerOrbit";
 import type { MoveIntent, MoveLimits } from "./locomotion/moveController";
 import { MAX_STEP_SEC, createMoveState, stepLocomotion } from "./locomotion/moveController";
@@ -34,6 +35,9 @@ import { NEVER_RAYCAST, OUTLINE_INK, capsuleHullScale } from "./assets/outline";
  * and a branch for a second camera owner. Everything here delegates.
  */
 
+/** How often the world is searched for something within reach. */
+const SCAN_INTERVAL_SEC = 0.15;
+
 /** Read once: an overlay that appears mid-session is a distraction. */
 const DEBUG = isDebugEnabled();
 
@@ -46,6 +50,9 @@ interface Scratch {
   pose: ReturnType<typeof createCameraPose>;
   /** Reused so broadcasting does not allocate ten objects a second. */
   wire: { pos: [number, number, number]; yaw: number; action: string; character: string };
+  /** Which target is in reach, and when it was last looked for. */
+  activeTargetId: string | null;
+  nextScanAt: number;
 }
 
 interface Props {
@@ -112,6 +119,8 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
     },
     pose: createCameraPose(),
     wire: { pos: [0, 0, 0], yaw: 0, action: "idle", character: "default" },
+    activeTargetId: null,
+    nextScanAt: 0,
   };
 
   useFrame((_, rawDelta) => {
@@ -161,7 +170,40 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
     wire.action = state.grounded ? (Math.hypot(state.vx, state.vz) > 0.1 ? "walk" : "idle") : "air";
     realtime.sendState(wire, Date.now());
 
-    // 5. Publish what the camera needs, then let the director place it. Last,
+    // 5. Look for something to walk up to. Several times a second rather than
+    //    every frame: a visitor cannot arrive at a sign between two frames,
+    //    and the scan is the only part of this loop whose cost grows with how
+    //    much the world contains.
+    working.nextScanAt -= dt;
+    if (working.nextScanAt <= 0) {
+      working.nextScanAt = SCAN_INTERVAL_SEC;
+      const found = chooseTarget(
+        targets,
+        state.x,
+        state.y,
+        state.z,
+        cfg.interaction.proximityRange,
+        working.activeTargetId,
+      );
+      const foundId = found?.id ?? null;
+      // Only when it changes: this is the one place in the frame loop allowed
+      // to touch React, and doing it every scan would re-render the overlay
+      // several times a second to say the same thing.
+      if (foundId !== working.activeTargetId) {
+        working.activeTargetId = foundId;
+        useInteractionStore.getState().offer(foundId, found?.prompt ?? "");
+      }
+    }
+
+    if (consumeInteract(inputState)) {
+      // Re-read rather than trusting the scan: the target may have gone in
+      // the interval, and activating something that no longer exists is how
+      // a modal opens onto a deleted panel.
+      const target = targets.find((t) => t.id === working.activeTargetId);
+      target?.activate();
+    }
+
+    // 6. Publish what the camera needs, then let the director place it. Last,
     //    so the camera frames this frame's position rather than the previous.
     ctx.subjectX = state.x;
     ctx.subjectY = state.y;
