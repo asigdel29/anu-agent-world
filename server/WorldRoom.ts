@@ -2,6 +2,8 @@ import { PERSIST_INTERVAL_MS, PLAYER_TTL_MS } from "../protocol/limits";
 import { connectionId, isAgentId } from "../protocol/ids";
 import type { ActorRecord, ServerFrame } from "../protocol/messages";
 import { parseFrame, readClientFrame } from "../protocol/messages";
+import type { Budget } from "./admission";
+import { admit, openBudget } from "./admission";
 import type { PlayerRecord } from "./storage";
 import { NAMESPACE, keyFor, partitionFresh } from "./storage";
 
@@ -21,6 +23,11 @@ import { NAMESPACE, keyFor, partitionFresh } from "./storage";
 
 export interface Env {
   readonly ROOM: DurableObjectNamespace;
+  /**
+   * Comma-separated origins permitted to open a socket. Unset permits every
+   * origin, which is what local development and any non-browser client need.
+   */
+  readonly ALLOWED_ORIGINS?: string;
 }
 
 export class WorldRoom {
@@ -33,6 +40,16 @@ export class WorldRoom {
    * writes, so persisting it would defeat it.
    */
   private readonly lastPersist = new Map<string, number>();
+
+  /**
+   * What each connection is still allowed to send.
+   *
+   * Also in memory, and losing it on a wake is harmless for a reason worth
+   * stating: an object only hibernates when it has been idle, and an idle
+   * connection's bucket would have refilled to full anyway. A flooder never
+   * lets the room go idle, so it never gets its budget reset.
+   */
+  private readonly budgets = new Map<string, Budget>();
 
   constructor(state: DurableObjectState) {
     this.state = state;
@@ -104,14 +121,17 @@ export class WorldRoom {
   }
 
   webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): void {
-    const parsed = parseFrame(message);
-    if (!parsed) return;
-    const frame = readClientFrame(parsed);
-    if (!frame) return;
-
     const id = this.idOf(ws);
     if (!id) return;
     const now = Date.now();
+
+    // A frame that fails to parse or names a type no client may send is still
+    // charged. Otherwise the cheapest way to flood the room would be to send
+    // garbage, which is the one thing no budget was checking.
+    const parsed = parseFrame(message);
+    const frame = parsed ? readClientFrame(parsed) : null;
+    if (!this.charge(ws, id, frame?.type ?? "unknown", now)) return;
+    if (!frame) return;
 
     if (frame.type === "ping") {
       this.send(ws, { type: "pong", t: frame.t, s: now });
@@ -150,6 +170,25 @@ export class WorldRoom {
     });
   }
 
+  /**
+   * Charge a frame, returning whether it may be acted on. A connection that
+   * keeps overrunning is closed rather than merely ignored, because a socket
+   * whose frames are all discarded is still costing the room a parse.
+   */
+  private charge(ws: WebSocket, id: string, frameType: string, now: number): boolean {
+    const { budget, verdict } = admit(this.budgets.get(id) ?? openBudget(now), frameType, now);
+    this.budgets.set(id, budget);
+    if (verdict === "allow") return true;
+    if (verdict === "close") {
+      try {
+        ws.close(1008, "rate limit");
+      } catch {
+        // Already gone.
+      }
+    }
+    return false;
+  }
+
   webSocketClose(ws: WebSocket): void {
     this.departed(ws);
   }
@@ -162,6 +201,7 @@ export class WorldRoom {
     const id = this.idOf(ws);
     if (!id) return;
     this.lastPersist.delete(id);
+    this.budgets.delete(id);
     this.broadcast({ type: "leave", id, ts: Date.now() });
   }
 }

@@ -1,4 +1,5 @@
 import { ROOM } from "../protocol/limits";
+import { isAllowedOrigin, parseAllowlist } from "./admission";
 import type { Env } from "./WorldRoom";
 
 export { WorldRoom } from "./WorldRoom";
@@ -21,6 +22,9 @@ export default {
     }
     if (request.headers.get("Upgrade") !== "websocket") {
       return new Response("expected websocket", { status: 426 });
+    }
+    if (!isAllowedOrigin(request.headers.get("Origin"), parseAllowlist(env.ALLOWED_ORIGINS))) {
+      return new Response("origin not allowed", { status: 403 });
     }
 
     const stub = env.ROOM.get(env.ROOM.idFromName(ROOM));
