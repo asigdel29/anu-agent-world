@@ -9,6 +9,7 @@ import { createSurfaceQuery } from "./collision/surfaceQuery";
 import type { CameraContext } from "./camera/cameraDirector";
 import { createCameraDirector, createCameraPose } from "./camera/cameraDirector";
 import { createFollowMode } from "./camera/modes/follow";
+import { DEFAULT_ORBIT, createOrbitIslandMode, wantsToDescend } from "./camera/modes/orbitIsland";
 import { debugStats, isDebugEnabled } from "./debug/debugStats";
 import { consumeInteract, consumeJump, inputState, resolveMoveDirection } from "./input/inputState";
 import { chooseTarget, targets, useInteractionStore } from "./interaction/interactionStore";
@@ -53,6 +54,8 @@ interface Scratch {
   /** Which target is in reach, and when it was last looked for. */
   activeTargetId: string | null;
   nextScanAt: number;
+  /** Whether the visitor has come down into the world yet. */
+  descended: boolean;
 }
 
 interface Props {
@@ -121,6 +124,7 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
     wire: { pos: [0, 0, 0], yaw: 0, action: "idle", character: "default" },
     activeTargetId: null,
     nextScanAt: 0,
+    descended: false,
   };
 
   useFrame((_, rawDelta) => {
@@ -132,7 +136,22 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
     // must not be integrated whole, or the character teleports through walls
     // in a single step.
     const dt = Math.min(rawDelta, MAX_STEP_SEC);
-    if (director.activeId() === null) director.push(createFollowMode(), ctx);
+
+    // A visitor arrives looking at the island rather than standing on it. A
+    // third-person camera answers "where am I standing"; it cannot answer
+    // "what is this", and someone dropped straight into one sees a patch of
+    // ground and their own back.
+    if (director.activeId() === null) {
+      director.push(
+        createOrbitIslandMode({
+          ...DEFAULT_ORBIT,
+          centreX: (cfg.bounds.minX + cfg.bounds.maxX) / 2,
+          centreY: cfg.vertical.groundMinY + 2,
+          centreZ: (cfg.bounds.minZ + cfg.bounds.maxZ) / 2,
+        }),
+        ctx,
+      );
+    }
 
     // 0. Apply anything that arrived since the last frame, before a single ray
     //    is cast. Everything below reads one unchanging world.
@@ -146,10 +165,22 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
     intent.run = inputState.run;
     intent.jumpPressed = consumeJump(inputState);
 
-    // 2. Advance the character.
-    stepLocomotion(state, intent, cfg.locomotion, limits, query, dt);
+    // 2. Come down into the world the moment the visitor asks to move. The
+    //    director cross-fades, so this reads as descending rather than
+    //    cutting, and it happens once.
+    if (!working.descended && wantsToDescend(intent.moveX, intent.moveZ, intent.jumpPressed)) {
+      working.descended = true;
+      director.push(createFollowMode(), ctx);
+    }
 
-    // 3. Write the transform, and publish the position the world streams
+    // 3. Advance the character. Movement is held until the descent, so the
+    //    character cannot wander off-screen while the island is being looked
+    //    at, and the first step happens under the follow camera.
+    if (working.descended) {
+      stepLocomotion(state, intent, cfg.locomotion, limits, query, dt);
+    }
+
+    // 4. Write the transform, and publish the position the world streams
     //    around. Streaming reads this rather than subscribing, so a moving
     //    character does not re-render the scene sixty times a second.
     if (group.current) {
@@ -160,7 +191,7 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
     subjectPosition.y = state.y;
     subjectPosition.z = state.z;
 
-    // 4. Tell the relay where the character is. Throttled inside, so this is
+    // 5. Tell the relay where the character is. Throttled inside, so this is
     //    called every frame and sends ten times a second; and a no-op while
     //    running solo, so the loop never has to ask whether anyone is there.
     wire.pos[0] = state.x;
@@ -170,7 +201,7 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
     wire.action = state.grounded ? (Math.hypot(state.vx, state.vz) > 0.1 ? "walk" : "idle") : "air";
     realtime.sendState(wire, Date.now());
 
-    // 5. Look for something to walk up to. Several times a second rather than
+    // 6. Look for something to walk up to. Several times a second rather than
     //    every frame: a visitor cannot arrive at a sign between two frames,
     //    and the scan is the only part of this loop whose cost grows with how
     //    much the world contains.
@@ -203,7 +234,7 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
       target?.activate();
     }
 
-    // 6. Publish what the camera needs, then let the director place it. Last,
+    // 7. Publish what the camera needs, then let the director place it. Last,
     //    so the camera frames this frame's position rather than the previous.
     ctx.subjectX = state.x;
     ctx.subjectY = state.y;
