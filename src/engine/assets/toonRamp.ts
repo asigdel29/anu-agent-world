@@ -1,4 +1,4 @@
-import { DataTexture, NearestFilter, RedFormat, type Texture } from "three";
+import { DataTexture, NearestFilter, RedFormat } from "three";
 
 /**
  * The tonal ramp every lit surface in the world shares.
@@ -54,15 +54,19 @@ export function rampBytes(steps: number = TOON_STEPS, floor: number = TOON_FLOOR
   return out;
 }
 
-let shared: Texture | null = null;
+let shared: DataTexture | null = null;
 
 /**
  * The shared ramp texture, built on first use.
  *
  * Nearest filtering is the entire point: linear filtering would interpolate
  * between the steps and give back the smooth gradient this exists to avoid.
+ *
+ * Returned as a `DataTexture` rather than a `Texture` so its dimensions stay
+ * typed — the general texture's image is deliberately untyped, and the test
+ * that guards the step count needs to read it.
  */
-export function toonRamp(): Texture {
+export function toonRamp(): DataTexture {
   if (shared) return shared;
   const bytes = rampBytes();
   const texture = new DataTexture(bytes, bytes.length, 1, RedFormat);
