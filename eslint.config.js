@@ -5,7 +5,15 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "coverage", "public"] },
+  { ignores: ["dist", "coverage", "public", "dist-probe"] },
+
+  // Plain JavaScript: config files only. These sit outside the TypeScript
+  // project, so they get syntax-level rules but no type-aware ones.
+  {
+    files: ["**/*.js"],
+    extends: [js.configs.recommended],
+    languageOptions: { globals: globals.node },
+  },
 
   // Engine code is world-agnostic by contract: the world is injected as a
   // config object, a manifest, a catalog, and a scene component. Re-theming the
@@ -29,12 +37,21 @@ export default tseslint.config(
     },
   },
 
+  // Type-aware linting. `projectService` resolves each file to its owning
+  // tsconfig, which lets rules reason about real types: floating promises,
+  // unsafe `any` flowing through call sites, and misused promises in event
+  // handlers are all invisible to syntax-only linting and all bite in a frame
+  // loop or a network handler.
   {
     files: ["**/*.{ts,tsx}"],
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    extends: [js.configs.recommended, ...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.browser,
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     plugins: {
       "react-hooks": reactHooks,
