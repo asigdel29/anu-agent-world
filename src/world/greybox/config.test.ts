@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { validateWorldConfig } from "../../engine/config/validateWorldConfig";
 import { greyboxConfig } from "./config";
+import { greyboxExtents } from "./manifest";
 
 /**
  * Every world that ships is checked against the invariants.
@@ -33,6 +34,13 @@ describe("greybox", () => {
     // The predecessor project's terrain sat between y 60 and 85, which let
     // constants that assumed that range go unnoticed.
     expect(greyboxConfig.vertical.groundMinY).toBe(0);
+  });
+
+  it("agrees with the extents its own manifest covers", () => {
+    // Bounds written down separately from the terrain is how the two drift
+    // apart, and the symptom — an invisible wall, or walkable ground beyond
+    // the edge of the world — is far from the cause.
+    expect(greyboxExtents).toEqual(greyboxConfig.bounds);
   });
 
   it("brackets the step ceiling with climbable and unclimbable ledges", () => {

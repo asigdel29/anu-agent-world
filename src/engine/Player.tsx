@@ -12,6 +12,7 @@ import { consumeJump, inputState, resolveMoveDirection } from "./input/inputStat
 import { orbitState } from "./input/usePointerOrbit";
 import type { MoveIntent, MoveLimits } from "./locomotion/moveController";
 import { createMoveState, stepLocomotion } from "./locomotion/moveController";
+import { subjectPosition } from "./streaming/chunkStore";
 import { world } from "./config/worldConfig";
 
 /**
@@ -117,11 +118,16 @@ export default function Player({ colliderRegistry }: Props) {
     // 2. Advance the character.
     stepLocomotion(state, intent, cfg.locomotion, limits, query, dt);
 
-    // 3. Write the transform.
+    // 3. Write the transform, and publish the position the world streams
+    //    around. Streaming reads this rather than subscribing, so a moving
+    //    character does not re-render the scene sixty times a second.
     if (group.current) {
       group.current.position.set(state.x, state.y, state.z);
       group.current.rotation.y = state.yaw;
     }
+    subjectPosition.x = state.x;
+    subjectPosition.y = state.y;
+    subjectPosition.z = state.z;
 
     // 4. Publish what the camera needs, then let the director place it. Last,
     //    so the camera frames this frame's position rather than the previous.
