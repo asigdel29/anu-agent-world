@@ -1,3 +1,4 @@
+import { BackSide } from "three";
 import { useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import type { Group } from "three";
@@ -18,6 +19,7 @@ import type { PlacementSnapshot, PlacementStore } from "./placements/placementSt
 import { subjectPosition } from "./streaming/chunkStore";
 import { world } from "./config/worldConfig";
 import { toonRamp } from "./assets/toonRamp";
+import { OUTLINE_INK, OUTLINE_MARGIN } from "./assets/outline";
 
 /**
  * The character, and the one ordered pass over everything that moves.
@@ -199,6 +201,12 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
       <mesh position={[0, height / 2, 0]}>
         <capsuleGeometry args={[radius, height - radius * 2, 4, 12]} />
         <meshToonMaterial color="#ff4f38" gradientMap={toonRamp()} />
+      </mesh>
+      {/* The line. A capsule grows uniformly rather than per axis: its radius
+          already governs both dimensions, so one factor keeps the margin even. */}
+      <mesh position={[0, height / 2, 0]} scale={1 + (OUTLINE_MARGIN * 2) / radius}>
+        <capsuleGeometry args={[radius, height - radius * 2, 4, 12]} />
+        <meshBasicMaterial color={OUTLINE_INK} side={BackSide} depthWrite={false} />
       </mesh>
       {/* A nose, so facing is readable while there is no model. */}
       <mesh position={[0, height * 0.7, radius + 0.1]}>

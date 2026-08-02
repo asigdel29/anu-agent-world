@@ -1,3 +1,4 @@
+import { BackSide } from "three";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { Color, Matrix4, Sphere, Vector3 } from "three";
 import type { InstancedMesh } from "three";
@@ -5,6 +6,7 @@ import type { InstancedMesh } from "three";
 import type { PropKind } from "./catalogTypes";
 import type { Placement } from "./placementOps";
 import { toonRamp } from "../assets/toonRamp";
+import { OUTLINE_INK, OUTLINE_MARGIN, hullSize } from "../assets/outline";
 
 /**
  * Every live instance of one kind, drawn in a single call.
@@ -40,6 +42,9 @@ interface Props {
 
 export default function InstancedKind({ kind, instances, version }: Props) {
   const mesh = useRef<InstancedMesh>(null);
+  // The outline shares this batch's matrices exactly, so it cannot be scaled
+  // separately; its geometry is built larger instead.
+  const hull = useRef<InstancedMesh>(null);
   const uploaded = useRef(-1);
 
   // three tests instanced meshes one instance at a time. Disabling the hook
@@ -52,6 +57,10 @@ export default function InstancedKind({ kind, instances, version }: Props) {
       /* answered analytically; see the spatial hash */
     };
     current.frustumCulled = true;
+    if (hull.current) {
+      hull.current.raycast = () => {};
+      hull.current.frustumCulled = true;
+    }
   }, []);
 
   // Layout rather than passive effect: the matrices must be in place before
@@ -76,6 +85,7 @@ export default function InstancedKind({ kind, instances, version }: Props) {
       scratchMatrix.scale(scratchScale);
       scratchMatrix.setPosition(scratchPosition);
       current.setMatrixAt(i, scratchMatrix);
+      hull.current?.setMatrixAt(i, scratchMatrix);
 
       if (current.instanceColor) {
         scratchColor.set(place.color ?? kind.color);
@@ -87,6 +97,10 @@ export default function InstancedKind({ kind, instances, version }: Props) {
 
     current.count = count;
     current.instanceMatrix.needsUpdate = true;
+    if (hull.current) {
+      hull.current.count = count;
+      hull.current.instanceMatrix.needsUpdate = true;
+    }
     if (current.instanceColor) current.instanceColor.needsUpdate = true;
 
     // The automatically computed sphere is wrong for instanced content: it
@@ -94,13 +108,19 @@ export default function InstancedKind({ kind, instances, version }: Props) {
     // batch would be culled while still on screen.
     current.boundingSphere ??= new Sphere();
     current.boundingSphere.set(ORIGIN, radius);
+    if (hull.current) {
+      hull.current.boundingSphere ??= new Sphere();
+      hull.current.boundingSphere.set(ORIGIN, radius + OUTLINE_MARGIN);
+    }
 
     uploaded.current = version;
   }, [instances, version, kind]);
 
   const lit = kind.material === "dynamic";
+  const outlined = hullSize([kind.sizeX, kind.sizeY, kind.sizeZ]);
 
   return (
+    <>
     <instancedMesh
       ref={mesh}
       args={[undefined, undefined, kind.maxInstances]}
@@ -117,5 +137,18 @@ export default function InstancedKind({ kind, instances, version }: Props) {
         <meshBasicMaterial color={kind.color} />
       )}
     </instancedMesh>
+    <instancedMesh
+      ref={hull}
+      args={[undefined, undefined, kind.maxInstances]}
+      count={0}
+    >
+      {kind.shape === "box" ? (
+        <boxGeometry args={outlined} />
+      ) : (
+        <cylinderGeometry args={[outlined[0] / 2, outlined[0] / 2, outlined[1], 12]} />
+      )}
+      <meshBasicMaterial color={OUTLINE_INK} side={BackSide} depthWrite={false} />
+    </instancedMesh>
+    </>
   );
 }
