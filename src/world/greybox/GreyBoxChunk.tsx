@@ -1,6 +1,6 @@
 import type { ChunkSpec } from "../../engine/streaming/chunkGrid";
 import { greyboxConfig as CFG } from "./config";
-import { toonRamp } from "../../engine/assets/toonRamp";
+import OutlinedBox from "../../engine/assets/Outlined";
 
 /**
  * The contents of one grey-box cell.
@@ -52,12 +52,7 @@ function Box({
   color: string;
   rotation?: [number, number, number] | undefined;
 }) {
-  return (
-    <mesh position={position} rotation={rotation ?? [0, 0, 0]}>
-      <boxGeometry args={size} />
-      <meshToonMaterial color={color} gradientMap={toonRamp()} />
-    </mesh>
-  );
+  return <OutlinedBox position={position} size={size} color={color} rotation={rotation} />;
 }
 
 /** Ground for a cell, cut where the trench crosses it. */
