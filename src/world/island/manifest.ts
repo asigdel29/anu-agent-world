@@ -1,5 +1,5 @@
 import type { ChunkSpec } from "../../engine/streaming/chunkGrid";
-import manifest from "../../../public/world/chunks.json";
+import manifest from "./data/chunks.json";
 
 /**
  * The island, as the pipeline sliced it.

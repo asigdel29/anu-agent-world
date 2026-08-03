@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useMemo } from "react";
 
 import { configureWorld } from "./engine/config/worldConfig";
 import { isDebugEnabled } from "./engine/debug/debugStats";
@@ -6,6 +6,7 @@ import { greyboxCatalog, greyboxPlacementLimits } from "./world/greybox/catalog"
 import { greyboxConfig } from "./world/greybox/config";
 import { islandCatalog, islandPlacementLimits } from "./world/island/catalog";
 import { islandConfig } from "./world/island/config";
+import { islandSeed } from "./world/island/seed";
 import ControlsHint from "./ui/ControlsHint";
 import InteractPrompt from "./ui/InteractPrompt";
 import Panel from "./ui/Panel";
@@ -42,11 +43,16 @@ const DEBUG = isDebugEnabled();
  */
 function IslandWorld() {
   const catalogGeometry = useIslandGeometry();
+  // Derived once, and from nothing that changes. A seed rebuilt every render
+  // would re-enqueue the same placements forever -- harmless to the reducer,
+  // and still a queue that never empties.
+  const seed = useMemo(() => islandSeed(islandConfig.placements.cellSize), []);
   return (
     <Engine
       catalog={islandCatalog}
       placementLimits={islandPlacementLimits}
       catalogGeometry={catalogGeometry}
+      seed={seed}
     >
       {(registry) => <IslandScene colliderRegistry={registry} />}
     </Engine>

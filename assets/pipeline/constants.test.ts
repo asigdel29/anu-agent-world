@@ -36,11 +36,11 @@ interface Manifest {
 }
 
 const constants = JSON.parse(
-  readFileSync(join(ROOT, "public", "world", "constants.json"), "utf-8"),
+  readFileSync(join(ROOT, "src", "world", "island", "data", "constants.json"), "utf-8"),
 ) as Constants;
 
 const manifest = JSON.parse(
-  readFileSync(join(ROOT, "public", "world", "chunks.json"), "utf-8"),
+  readFileSync(join(ROOT, "src", "world", "island", "data", "chunks.json"), "utf-8"),
 ) as Manifest;
 
 describe("the measured world", () => {

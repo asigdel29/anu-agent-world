@@ -1,7 +1,7 @@
 import type { PlacementLimits } from "../../engine/placements/placementOps";
 import type { PropCatalog, PropKind } from "../../engine/placements/catalogTypes";
 import { buildCatalog } from "../../engine/placements/catalogTypes";
-import catalogData from "../../../public/world/catalog.json";
+import catalogData from "./data/catalog.json";
 import { islandConfig } from "./config";
 
 /**

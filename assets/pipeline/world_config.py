@@ -80,7 +80,12 @@ WORLDS = {
     "island": {
         "blend": "assets/world.blend",
         "out_models": "public/models/world",
-        "out_data": "public/world",
+        # The data lands in src/ rather than public/ because it is imported
+        # rather than fetched: it is small, the world cannot start without it,
+        # and a bundler is entitled to refuse an import from the directory it
+        # serves statically. Geometry stays in public/, where it is fetched on
+        # demand and never imported.
+        "out_data": "src/world/island/data",
         # Anything under this collection is terrain to be sliced. Everything
         # else in the file -- lights, cameras, reference geometry -- is
         # working material and is not exported.

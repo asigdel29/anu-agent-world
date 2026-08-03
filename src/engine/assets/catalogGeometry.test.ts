@@ -136,3 +136,52 @@ describe("collectCatalogGeometry", () => {
     expect(collectCatalogGeometry(scene, ["prop_crate", "prop_crate"]).size).toBe(1);
   });
 });
+
+describe("per-part colour", () => {
+  it("writes each part's colour into its vertices", () => {
+    // Merging discards per-part materials, so a bench whose seat and legs
+    // were authored in different colours arrives as one flat shape unless
+    // the colours travel with the vertices.
+    const scene = new Group();
+    const prop = new Group();
+    prop.name = "prop_bench";
+    const seat = boxMesh(1, [0, 0, 0], "seat");
+    (seat.material as MeshBasicMaterial).color.setRGB(1, 0, 0);
+    const leg = boxMesh(0.3, [0.8, 0, 0], "leg");
+    (leg.material as MeshBasicMaterial).color.setRGB(0, 0, 1);
+    prop.add(seat, leg);
+    scene.add(prop);
+
+    const geometry = collectCatalogGeometry(scene, ["prop_bench"]).get("prop_bench")!;
+    const colour = geometry.getAttribute("color");
+    expect(colour).toBeDefined();
+    expect(colour.count).toBe(geometry.getAttribute("position").count);
+
+    const seen = new Set<string>();
+    for (let i = 0; i < colour.count; i += 1) {
+      seen.add(`${colour.getX(i)},${colour.getY(i)},${colour.getZ(i)}`);
+    }
+    expect(seen.has("1,0,0")).toBe(true);
+    expect(seen.has("0,0,1")).toBe(true);
+  });
+
+  it("gives a single-part prop colour too", () => {
+    // Every kind carries colour the same way, so the renderer needs no branch.
+    const scene = new Group();
+    const prop = new Group();
+    prop.name = "prop_crate";
+    const mesh = boxMesh(1, [0, 0, 0]);
+    (mesh.material as MeshBasicMaterial).color.setRGB(0.5, 0.3, 0.2);
+    prop.add(mesh);
+    scene.add(prop);
+
+    const geometry = collectCatalogGeometry(scene, ["prop_crate"]).get("prop_crate")!;
+    expect(geometry.getAttribute("color")).toBeDefined();
+  });
+
+  it("leaves a part with no material white rather than tinting it", () => {
+    const a = new BoxGeometry(1, 1, 1);
+    const merged = mergeGeometries([a], [null]);
+    expect(merged.getAttribute("color")).toBeUndefined();
+  });
+});

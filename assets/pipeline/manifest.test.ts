@@ -23,7 +23,7 @@ import { deriveExtents } from "../../src/engine/streaming/chunkGrid";
  */
 
 const ROOT = join(import.meta.dirname, "..", "..");
-const MANIFEST = join(ROOT, "public", "world", "chunks.json");
+const MANIFEST = join(ROOT, "src", "world", "island", "data", "chunks.json");
 
 interface Manifest {
   readonly chunkSize: number;

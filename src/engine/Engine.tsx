@@ -17,6 +17,7 @@ import { visitorId } from "./net/visitorId";
 import { world } from "./config/worldConfig";
 import Player from "./Player";
 import type { CatalogGeometry } from "./assets/catalogGeometry";
+import type { PlacementOp } from "./placements/placementOps";
 
 /** Read once, so the probe is either mounted for the session or never. */
 const DEBUG = isDebugEnabled();
@@ -30,6 +31,12 @@ interface Props {
   placementLimits: PlacementLimits;
   /** Authored prop geometry, for a world that ships a catalogue file. */
   catalogGeometry?: CatalogGeometry | undefined;
+  /**
+   * Placements a world ships with. Applied through the same queue as
+   * everything else, so nothing here is a path the rest of the system has to
+   * know about.
+   */
+  seed?: readonly PlacementOp[] | undefined;
 }
 
 /**
@@ -39,7 +46,13 @@ interface Props {
  * being written here, which is what keeps this component free of any
  * particular world's facts.
  */
-export default function Engine({ children, catalog, placementLimits, catalogGeometry }: Props) {
+export default function Engine({
+  children,
+  catalog,
+  placementLimits,
+  catalogGeometry,
+  seed,
+}: Props) {
   const cfg = useMemo(() => world(), []);
   const registry = useMemo(() => createColliderRegistry(), []);
   const placements = useMemo(
@@ -58,6 +71,13 @@ export default function Engine({ children, catalog, placementLimits, catalogGeom
   // Changes from the relay join the same pending queue the dev console uses,
   // so a crate placed by an agent and one typed at the console reach the
   // world through one path and are both applied by the commit phase.
+  // Enqueued rather than applied: the commit phase at the top of the frame
+  // owns every change to the world, and a seed written straight into the map
+  // would be the one thing that arrived by a different route.
+  useEffect(() => {
+    if (seed && seed.length > 0) placements.enqueue(seed);
+  }, [placements, seed]);
+
   useEffect(() => {
     worldSink.apply = (ops) => {
       placements.enqueue(ops);
