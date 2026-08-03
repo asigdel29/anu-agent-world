@@ -192,3 +192,50 @@ Two optional build-time variables, both absent by default:
   `styleText` from `node:util`, which Node 18 does not have; nothing in the repo
   declared a version until a deploy picked 18 and failed.
 - React 19 is required by `@react-three/fiber` v9 (`>=19 <19.3`).
+
+## Left to do: connect Cloudflare
+
+**The relay is written, tested, and not deployed.** Everything above about
+presence, chat and clock sync is real code with real coverage that no running
+world is currently using, because there is no Worker to connect to and
+`VITE_RELAY_HOST` is unset. The deployed world is solo.
+
+This is stopped on an account decision rather than on anything technical. The
+Cloudflare account `wrangler` happens to be authenticated against is a work
+account, and this is a personal project; publishing a public endpoint for it
+under the wrong org is the kind of thing that is easy to do and tedious to
+undo. So it waits.
+
+To finish it:
+
+```bash
+npx wrangler login          # choose the personal account, not a work one
+npx wrangler whoami         # confirm which account before deploying anything
+npm run relay:deploy        # publishes server/worker.ts + the WorldRoom object
+```
+
+Then set `VITE_RELAY_HOST` to the deployed host and rebuild — it is replaced at
+build time, so a redeploy of the existing image will not pick it up:
+
+```bash
+railway variable set VITE_RELAY_HOST=<name>.<subdomain>.workers.dev \
+  --service agent-world
+railway up --service agent-world --detach
+```
+
+Confirm it took by looking at what the page actually serves rather than at a
+status code:
+
+```bash
+f=$(curl -s <site>/ | grep -o 'assets/index-[^"]*\.js') && curl -s "<site>/$f" | grep -c workers.dev
+```
+
+**Block edits do not cross the relay even once it is up.** The overlay in
+`src/world/voxel/edits.ts` is deliberately shaped for it — a sparse log of
+discrete changes, bucketed by cell, with a revision per cell — and nothing
+sends it. That is the next piece of work after the connection exists, not part
+of it.
+
+Analytics is in the same position for the same reason: fully instrumented,
+dormant, waiting on a `VITE_POSTHOG_KEY` from a personal project. A build
+without one ships zero analytics bytes, so there is no cost to it waiting.
