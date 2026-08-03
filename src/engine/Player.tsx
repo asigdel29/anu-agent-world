@@ -26,7 +26,7 @@ import type { PlacementSnapshot, PlacementStore } from "./placements/placementSt
 import { subjectPosition } from "./streaming/chunkStore";
 import { world } from "./config/worldConfig";
 import { toonRamp } from "./assets/toonRamp";
-import { NEVER_RAYCAST, OUTLINE_INK, capsuleHullScale } from "./assets/outline";
+import { NEVER_RAYCAST, capsuleHullScale } from "./assets/outline";
 
 /**
  * The character, and the one ordered pass over everything that moves.
@@ -40,6 +40,17 @@ import { NEVER_RAYCAST, OUTLINE_INK, capsuleHullScale } from "./assets/outline";
  * that also owned raycasting, camera maths, interaction scanning, footsteps,
  * and a branch for a second camera owner. Everything here delegates.
  */
+
+/**
+ * The stand-in body, until an avatar is chosen.
+ *
+ * Dark on a light world rather than coloured. A figure is the one thing on
+ * screen that must never be mistaken for terrain, and in a world with no hue
+ * the only way to say that is with value: everything else here is light, so
+ * the person is dark.
+ */
+const AVATAR_INK = "#1c1c1c";
+const AVATAR_EDGE = "#ffffff";
 
 /** How often the world is searched for something within reach. */
 const SCAN_INTERVAL_SEC = 0.15;
@@ -295,7 +306,7 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
           constants describe — but the styling does not, yet. */}
       <mesh position={[0, height / 2, 0]}>
         <capsuleGeometry args={[radius, height - radius * 2, 4, 12]} />
-        <meshToonMaterial color="#ff4f38" gradientMap={toonRamp()} />
+        <meshToonMaterial color={AVATAR_INK} gradientMap={toonRamp()} />
       </mesh>
       {/* The line. A capsule grows uniformly rather than per axis: its radius
           already governs both dimensions, so one factor keeps the margin even. */}
@@ -305,7 +316,7 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
         raycast={NEVER_RAYCAST}
       >
         <capsuleGeometry args={[radius, height - radius * 2, 4, 12]} />
-        <meshBasicMaterial color={OUTLINE_INK} side={BackSide} depthWrite={false} />
+        <meshBasicMaterial color={AVATAR_EDGE} side={BackSide} depthWrite={false} />
       </mesh>
       {/* A nose, so facing is readable while there is no model. */}
       <mesh position={[0, height * 0.7, radius + 0.1]}>
