@@ -8,6 +8,7 @@ import { islandCatalog, islandPlacementLimits } from "./world/island/catalog";
 import { islandConfig } from "./world/island/config";
 import { islandSeed } from "./world/island/seed";
 import { voxelConfig } from "./world/voxel/config";
+import AvatarPicker from "./ui/AvatarPicker";
 import ControlsHint from "./ui/ControlsHint";
 import InteractPrompt from "./ui/InteractPrompt";
 import Panel from "./ui/Panel";
@@ -83,6 +84,7 @@ export default function App() {
       <ControlsHint />
       <InteractPrompt />
       <Panel />
+      <AvatarPicker />
       <TouchControls />
       <RotateHint />
       {DEBUG && (

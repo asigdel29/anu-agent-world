@@ -62,6 +62,8 @@ export type WorldEventName =
   | "panel_opened"
   | "relay_connected"
   | "relay_unavailable"
+  | "avatar_opened"
+  | "avatar_changed"
   | "frame_budget_sampled";
 
 /**

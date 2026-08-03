@@ -26,8 +26,7 @@ import type { PlacementSnapshot, PlacementStore } from "./placements/placementSt
 import { subjectPosition } from "./streaming/chunkStore";
 import { world } from "./config/worldConfig";
 import AvatarBody from "./avatar/AvatarBody";
-import { avatarFromId, encodeAvatar } from "../../protocol/avatar";
-import { visitorId } from "./net/visitorId";
+import { localAvatar, useAvatarStore } from "./avatar/avatarStore";
 
 /**
  * The character, and the one ordered pass over everything that moves.
@@ -75,10 +74,9 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
   const cfg = useMemo(() => world(), []);
   const camera = useThree((state) => state.camera);
   const group = useRef<Group>(null);
-  // Derived from who this visitor is rather than chosen, for now: everybody
-  // arrives looking different, and nobody can change it yet. Computed once —
-  // it is a pure function of an identifier that does not change.
-  const code = useMemo(() => encodeAvatar(avatarFromId(visitorId())), []);
+  // The only subscription in this component, and it fires when a visitor
+  // edits their appearance — about once a session, never during play.
+  const code = useAvatarStore((s) => s.code);
 
   // Terrain and placements answer as one oracle, so movement never learns
   // that placements exist. The hash is read through a callback rather than
@@ -233,7 +231,10 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
     wire.pos[2] = state.z;
     wire.yaw = state.yaw;
     wire.action = state.grounded ? (Math.hypot(state.vx, state.vz) > 0.1 ? "walk" : "idle") : "air";
-    wire.character = code;
+    // Read from the mirror rather than from the subscribed value, so a change
+    // reaches the wire on the next frame instead of waiting for a re-render —
+    // and so this line does not depend on React having run.
+    wire.character = localAvatar.code;
     realtime.sendState(wire, Date.now());
 
     // 6. Look for something to walk up to. Several times a second rather than
