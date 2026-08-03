@@ -1,5 +1,4 @@
-import { BackSide } from "three";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group, Mesh } from "three";
 
@@ -7,8 +6,7 @@ import { isAgentId } from "../../../protocol/ids";
 import { isSpeaking } from "./actorRegistry";
 import { LERP_SPEED, dampFraction, stepAngle } from "./remoteInterp";
 import { actors } from "./useRealtime";
-import { toonRamp } from "../assets/toonRamp";
-import { NEVER_RAYCAST, capsuleHullScale } from "../assets/outline";
+import AvatarBody from "../avatar/AvatarBody";
 
 /**
  * One other body in the world.
@@ -28,11 +26,11 @@ import { NEVER_RAYCAST, capsuleHullScale } from "../assets/outline";
 /**
  * Agents are marked, so a visitor can tell who is not a person.
  *
- * By value rather than by hue, like everything else here. An agent is the
- * darkest thing in the world and a visitor a step lighter, which survives
- * both the monochrome palette and being seen at a distance through fog.
+ * By value rather than by hue, like everything else here: an agent is the
+ * darkest thing in the world, which survives both the monochrome palette and
+ * being seen at a distance through fog. A visitor's value is theirs to
+ * choose; an agent's is not, which is the point of overriding it.
  */
-const VISITOR_COLOUR = "#4a4a4a";
 const AGENT_COLOUR = "#000000";
 
 interface Props {
@@ -44,16 +42,20 @@ interface Props {
 export default function Actor({ id, height, radius }: Props) {
   const group = useRef<Group>(null);
   const bubble = useRef<Mesh>(null);
-  // Derived from the identifier rather than from the frame, because it is
-  // fixed for the life of the body: the relay reserves the agent prefix, so
-  // an id that names an agent always will. Reading it from a frame would mean
-  // a value that changes during a useFrame and never reaches the material.
-  const colour = isAgentId(id) ? AGENT_COLOUR : VISITOR_COLOUR;
+  // Whether this is an agent is derived from the identifier rather than from
+  // a frame, because it is fixed for the life of the body: the relay reserves
+  // the agent prefix, so an id that names an agent always will.
+  const agent = isAgentId(id);
+  // The appearance arrives on every transform frame but changes about never,
+  // so it is compared before it is committed. Without the comparison a body
+  // would re-render ten times a second to say what it already said.
+  const [code, setCode] = useState("");
 
   useFrame((_, dt) => {
     const actor = actors.actors.get(id);
     const node = group.current;
     if (!actor || !node) return;
+    if (actor.character !== code) setCode(actor.character);
 
     // Frames arrive ten times a second and the screen redraws sixty, so most
     // frames carry no new information. Easing towards the last known
@@ -74,27 +76,15 @@ export default function Actor({ id, height, radius }: Props) {
 
   return (
     <group ref={group}>
-      <mesh position={[0, height / 2, 0]}>
-        <capsuleGeometry args={[radius, height - radius * 2, 4, 12]} />
-        <meshToonMaterial color={colour} gradientMap={toonRamp()} />
-      </mesh>
-      {/* The line. A capsule grows uniformly rather than per axis: its radius
-          already governs both dimensions, so one factor keeps the margin even. */}
-      <mesh
-        position={[0, height / 2, 0]}
-        scale={capsuleHullScale(radius, height)}
-        raycast={NEVER_RAYCAST}
-      >
-        <capsuleGeometry args={[radius, height - radius * 2, 4, 12]} />
-        <meshBasicMaterial color="#ffffff" side={BackSide} depthWrite={false} />
-      </mesh>
-      {/* A nose, so facing is readable while there is no model. */}
-      <mesh position={[0, height * 0.7, radius + 0.1]}>
-        <boxGeometry args={[0.12, 0.12, 0.3]} />
-        {/* Flat and unlit: the facing marker belongs to the outline
-            language rather than to the lit surfaces. */}
-        <meshBasicMaterial color="#ffffff" />
-      </mesh>
+      {/* An agent is drawn from the same component as a visitor, overridden to
+          one flat value. Marking it by value rather than by hue is what makes
+          it still legible at fog distance in a world with no colour. */}
+      <AvatarBody
+        code={code}
+        height={height}
+        radius={radius}
+        {...(agent ? { ink: AGENT_COLOUR } : {})}
+      />
       {/* Speech is marked here and read here; the words themselves are drawn
           by the overlay, which can lay out text without shipping a font into
           the scene or fetching one from a third party. */}
