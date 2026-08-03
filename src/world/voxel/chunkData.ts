@@ -34,6 +34,14 @@ const CROWN_REACH = 2;
 export interface ChunkData {
   /** Blocks, indexed by {@link index}. */
   readonly blocks: Uint8Array;
+  /**
+   * Highest block that is not air, or -1 for an empty chunk.
+   *
+   * Recorded while filling because the mesher would otherwise scan every
+   * column to the world ceiling, and on this terrain the top half of every
+   * chunk is air. Scanning it is pure cost with no face at the end of it.
+   */
+  readonly maxY: number;
   /** Edge of the chunk proper, not counting the margin. */
   readonly size: number;
   /** Blocks of margin on each side. */
@@ -71,12 +79,9 @@ export function generateChunk(
 ): ChunkData {
   const margin = 1 + CROWN_REACH;
   const stride = size + margin * 2;
-  const data: ChunkData = {
-    blocks: new Uint8Array(stride * stride * height),
-    size,
-    margin,
-    height,
-  };
+  const blocks = new Uint8Array(stride * stride * height);
+  let maxY = -1;
+  const data: ChunkData = { blocks, size, margin, height, maxY };
 
   const originX = cx * size;
   const originZ = cz * size;
@@ -109,7 +114,10 @@ export function generateChunk(
                   ? GRASS
                   : SOIL;
         }
-        if (block !== AIR) data.blocks[index(data, lx, y, lz)] = block;
+        if (block !== AIR) {
+          data.blocks[index(data, lx, y, lz)] = block;
+          if (y > maxY) maxY = y;
+        }
       }
     }
   }
@@ -125,7 +133,10 @@ export function generateChunk(
       const base = heights[(lx + margin) * stride + (lz + margin)]! + 1;
       for (let i = 0; i < trunk; i += 1) {
         const y = base + i;
-        if (y < height) data.blocks[index(data, lx, y, lz)] = WOOD;
+        if (y < height) {
+          data.blocks[index(data, lx, y, lz)] = WOOD;
+          if (y > maxY) maxY = y;
+        }
       }
 
       const crown = base + trunk;
@@ -143,6 +154,7 @@ export function generateChunk(
             // would carve a hole in it.
             if (data.blocks[index(data, x, y, z)] === AIR) {
               data.blocks[index(data, x, y, z)] = LEAVES;
+              if (y > maxY) maxY = y;
             }
           }
         }
@@ -150,5 +162,5 @@ export function generateChunk(
     }
   }
 
-  return data;
+  return { ...data, maxY };
 }

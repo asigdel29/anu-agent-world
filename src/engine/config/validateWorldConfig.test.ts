@@ -197,25 +197,54 @@ describe("validateWorldConfig", () => {
   });
 
   describe("fog against the streaming edge", () => {
-    it("rejects fog that ends before the streaming edge", () => {
+    /** The base world's fog, at a chosen far distance. */
+    const withFog = (far: number) => {
       const base = baseConfig();
-      const cfg = {
+      return {
         ...base,
         atmosphere: {
           ...base.atmosphere,
-          fog: { color: "#a9c9ff", near: 20, far: 40 },
+          fog: { color: "#a9c9ff", near: far * 0.4, far },
         },
       };
-      expectProblem(validateWorldConfig(cfg), "pop into clear air");
+    };
+
+    const EDGE = baseConfig().streaming.radii.loadRadius * baseConfig().units.chunkSize;
+
+    it("accepts fog that closes at the streaming edge", () => {
+      expect(validateWorldConfig(withFog(EDGE))).toEqual([]);
+    });
+
+    it("accepts fog that closes a little inside the edge", () => {
+      expect(validateWorldConfig(withFog(EDGE * 0.8))).toEqual([]);
+    });
+
+    it("rejects fog that reaches past the streaming edge", () => {
+      // This test used to assert the opposite, and so did the rule. Fog hides
+      // an arriving chunk only if it is already opaque at the distance the
+      // chunk arrives at, so it must close at or inside the edge -- demanding
+      // that it extend beyond guarantees the pop it claims to prevent. The
+      // rule and its test were written from the same wrong picture, which is
+      // how a test comes to agree with a bug.
+      expectProblem(validateWorldConfig(withFog(EDGE * 1.5)), "reaches past the streaming edge");
+    });
+
+    it("rejects fog that closes far inside the edge", () => {
+      // The other half of the trade: chunks loaded that nobody can see.
+      expectProblem(validateWorldConfig(withFog(EDGE * 0.2)), "nobody can see");
     });
 
     it("rejects a camera that can zoom into fully-fogged space", () => {
+      // Distance max is 16 in the base world, so fog closing at 60 is fine;
+      // this pushes the camera out past it instead of pulling the fog in,
+      // which keeps the case about the camera rather than about the fog.
       const base = baseConfig();
       const cfg = {
         ...base,
+        camera: { ...base.camera, distance: { ...base.camera.distance, max: 80 } },
         atmosphere: {
           ...base.atmosphere,
-          fog: { color: "#a9c9ff", near: 8, far: 15 },
+          fog: { color: "#a9c9ff", near: 30, far: 60 },
         },
       };
       expectProblem(validateWorldConfig(cfg), "fully-fogged");

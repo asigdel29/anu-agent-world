@@ -21,8 +21,21 @@ const VOID_CLEARANCE = 5;
 /** A step taller than this share of body height is a wall, not a stair. */
 const MAX_STEP_SHARE_OF_HEIGHT = 0.5;
 
-/** Fog must hide the streaming edge by this multiple of the load radius. */
-const FOG_COVER_FACTOR = 1.5;
+/**
+ * Where fog must reach full opacity, as a share of the streaming edge.
+ *
+ * Fog hides a chunk arriving only if it is already opaque at the distance the
+ * chunk arrives at, so `fog.far` must be at or inside the edge -- not beyond
+ * it. An earlier version of this rule demanded the opposite, requiring fog to
+ * extend half again past the edge, which guarantees chunks appear in
+ * partly-clear air: precisely the thing it claimed to prevent. It never fired
+ * because every world until now had no fog at all.
+ *
+ * The lower bound is the other half of the trade: fog that closes far inside
+ * the edge means loading chunks nobody can see.
+ */
+const FOG_FAR_MAX_SHARE = 1.0;
+const FOG_FAR_MIN_SHARE = 0.5;
 
 /**
  * Share of the controller's step tolerance an island's drift may move the
@@ -202,10 +215,17 @@ export function validateWorldConfig(cfg: WorldConfig): string[] {
       );
     }
     const streamingEdge = streaming.radii.loadRadius * units.chunkSize;
-    if (fog.far < streamingEdge * FOG_COVER_FACTOR) {
+    if (fog.far > streamingEdge * FOG_FAR_MAX_SHARE) {
       out.push(
-        `atmosphere.fog.far (${fog.far}) is too near to hide the streaming edge ` +
-          `(${streamingEdge} units); chunks would visibly pop into clear air`,
+        `atmosphere.fog.far (${fog.far}) reaches past the streaming edge ` +
+          `(${streamingEdge} units), so a chunk arrives in air that is not yet ` +
+          `fully fogged and visibly pops in`,
+      );
+    }
+    if (fog.far < streamingEdge * FOG_FAR_MIN_SHARE) {
+      out.push(
+        `atmosphere.fog.far (${fog.far}) closes far inside the streaming edge ` +
+          `(${streamingEdge} units); chunks are being loaded that nobody can see`,
       );
     }
   }

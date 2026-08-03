@@ -89,7 +89,11 @@ export function meshChunk(data: ChunkData): MeshArrays {
 
   for (let x = 0; x < data.size; x += 1) {
     for (let z = 0; z < data.size; z += 1) {
-      for (let y = 0; y < data.height; y += 1) {
+      // Stop at the highest block rather than the world ceiling. On this
+      // terrain that is roughly half the column, and the half being skipped
+      // is guaranteed to produce nothing.
+      const top = Math.min(data.maxY, data.height - 1);
+      for (let y = 0; y <= top; y += 1) {
         const here = blockIn(data, x, y, z);
         if (here === 0) continue;
 

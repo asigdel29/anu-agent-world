@@ -150,6 +150,16 @@ export interface CameraConfig {
   readonly lookAhead: { readonly scale: number; readonly maxDistance: number };
   /** Seconds taken to cross-fade between camera modes. */
   readonly blendSec: number;
+  /**
+   * How a visitor arrives.
+   *
+   * "orbit" opens on the whole world seen from outside, which answers "what
+   * is this" in one frame and suits a world small enough to be seen whole.
+   * "follow" puts them straight into it, which is right for a world that has
+   * no outside -- framing the bounds of a generated landscape aims the camera
+   * hundreds of units back at a wall of fog.
+   */
+  readonly opening?: "orbit" | "follow" | undefined;
 }
 
 export interface AtmosphereConfig {

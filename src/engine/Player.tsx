@@ -146,7 +146,13 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
     // third-person camera answers "where am I standing"; it cannot answer
     // "what is this", and someone dropped straight into one sees a patch of
     // ground and their own back.
-    if (director.activeId() === null) {
+    if (director.activeId() === null && cfg.camera.opening === "follow") {
+      // A world with no outside is entered rather than surveyed. Marked as
+      // descended so the movement gate below does not hold the character
+      // still waiting for an arrival that already happened.
+      working.descended = true;
+      director.push(createFollowMode(), ctx);
+    } else if (director.activeId() === null) {
       director.push(
         createOrbitIslandMode({
           ...DEFAULT_ORBIT,
