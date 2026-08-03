@@ -1,0 +1,22 @@
+{
+  "bounds": {
+    "minX": -32.778,
+    "maxX": 32.956,
+    "minZ": -33.246,
+    "maxZ": 33.372
+  },
+  "vertical": {
+    "groundMinY": -8.4,
+    "groundMaxY": 2.4
+  },
+  "spawn": {
+    "position": [
+      0.0,
+      1.0,
+      -6.0
+    ],
+    "yaw": 0.0
+  },
+  "measuredMaxRiser": 0.6,
+  "maxStepHeight": 0.65
+}

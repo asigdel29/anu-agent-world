@@ -19,8 +19,9 @@ import bpy
 # until it is put on the path.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from constants import write_constants  # noqa: E402
 from slice_world import export_chunks, slice_world, write_manifest  # noqa: E402
-from world_config import CHUNK_SIZE, WORLDS  # noqa: E402
+from world_config import CHUNK_SIZE, CLIFF_RISE, MAX_RISER, RISER_EPSILON, WORLDS  # noqa: E402
 
 
 def spawn_cells(spawn, chunk_size):
@@ -39,6 +40,25 @@ def main():
     name = os.environ.get("WORLD", "island")
     world = WORLDS[name]
     root = os.getcwd()
+
+    sources = [bpy.data.objects[n] for n in world["source_objects"] if n in bpy.data.objects]
+
+    # Measured before anything is cut. Slicing replaces the geometry with
+    # trimmed copies, and a step measured across a seam is an artefact of the
+    # cut rather than something anybody authored.
+    path, constants = write_constants(
+        world,
+        sources,
+        os.path.join(root, world["out_data"]),
+        MAX_RISER,
+        RISER_EPSILON,
+        CLIFF_RISE,
+    )
+    print(f"[pipeline] wrote {path}")
+    print(
+        f"[pipeline] tallest step {constants['measuredMaxRiser']} "
+        f"against a limit of {MAX_RISER}"
+    )
 
     entries, bounds = slice_world(world, CHUNK_SIZE)
     print(f"[pipeline] sliced into {len(entries)} chunks")
