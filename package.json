@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p server",
     "test": "vitest run",
+    "size": "node scripts/checkBundleSize.mjs",
     "test:watch": "vitest",
     "relay:dev": "wrangler dev",
     "relay:deploy": "wrangler deploy"

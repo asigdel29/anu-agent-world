@@ -22,4 +22,7 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
+      # A bundle regression is felt by everyone who never arrives, which is
+      # the audience no other check in this list measures.
+      - run: npm run size
       - run: npm test
