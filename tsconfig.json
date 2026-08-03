@@ -21,7 +21,8 @@
 
     "allowJs": false
   },
-  // `server` is deliberately absent: it type-checks under server/tsconfig.json
-  // against the Workers runtime rather than the DOM. See the note there.
+  // `server` and `assets` are deliberately absent: each type-checks under its
+  // own project, against the Workers runtime and against Node. See the notes
+  // there -- three environments cannot share one `lib`.
   "include": ["src", "protocol", "shared", "*.config.ts"]
 }

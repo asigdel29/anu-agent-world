@@ -14,3 +14,7 @@ coverage/
 
 # Blender leaves a backup beside every save.
 *.blend1
+
+# Blender writes bytecode beside any script it imports.
+__pycache__/
+*.pyc
