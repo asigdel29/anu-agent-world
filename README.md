@@ -24,8 +24,12 @@ Working, deployed, and covered by tests:
   and respawns exactly once out of the void.
 - **The relay.** A Cloudflare Worker fronting one SQLite-backed Durable Object:
   presence, chat, clock sync, and a validated build path shared by every writer.
-- **Building.** Placements are validated against a closed catalogue, quota'd per
-  connection and per address, and expire on their own.
+- **Blocks.** Look at one and break it, or place one against the face you are
+  looking at, from a strip of the ten kinds the world is made of. A placed
+  block is not a change to the terrain — the terrain stays a pure function —
+  but an entry in a sparse overlay applied after it.
+- **Placements.** The other build path, for catalogue props: validated against
+  a closed set, quota'd per connection and per address, expiring on their own.
 - **Avatars.** Five choices encoded into the `character` field the state frame
   already carried, so what somebody looks like crosses the wire with no new
   message type and no second request.
@@ -36,6 +40,12 @@ modules with their own suites, waiting on a model client this repository does
 not contain yet.
 
 Not started: any agent that thinks. Nothing in this world currently speaks.
+
+Two gaps worth naming rather than leaving to be discovered. **Block edits do
+not cross the relay yet** — you can build, and nobody else sees it, and it is
+gone when you reload; the overlay is in the right shape to be synced and is
+not synced. And **no relay is configured in production**, so the deployed world
+is solo by default.
 
 ## The one structural claim
 
