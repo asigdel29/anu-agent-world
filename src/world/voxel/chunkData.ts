@@ -1,3 +1,5 @@
+import type { EditStore } from "./edits";
+import { editsAround } from "./edits";
 import { AIR, BLOCK_BY_NAME } from "./blocks";
 import { SEA_LEVEL, WORLD_HEIGHT, heightAt, isCave, treeAt } from "./terrain";
 
@@ -76,6 +78,7 @@ export function generateChunk(
   size: number,
   seed: number,
   height: number = WORLD_HEIGHT,
+  edits?: EditStore,
 ): ChunkData {
   const margin = 1 + CROWN_REACH;
   const stride = size + margin * 2;
@@ -159,6 +162,24 @@ export function generateChunk(
           }
         }
       }
+    }
+  }
+
+  // What people changed, applied last, so a placed block wins over anything
+  // the generator decided about that spot -- including a tree that grew there
+  // afterwards, which would otherwise reappear on the next visit.
+  if (edits) {
+    for (const edit of editsAround(edits, cx, cz)) {
+      const lx = edit.x - originX;
+      const lz = edit.z - originZ;
+      if (lx < -margin || lx >= size + margin) continue;
+      if (lz < -margin || lz >= size + margin) continue;
+      if (edit.y < 0 || edit.y >= height) continue;
+      data.blocks[index(data, lx, edit.y, lz)] = edit.block;
+      // Only ever raised. A block placed above the terrain extends the scan
+      // the mesher does; one broken below it leaves the ceiling where it was,
+      // which costs an empty row of scanning and cannot miss a face.
+      if (edit.block !== AIR && edit.y > maxY) maxY = edit.y;
     }
   }
 
