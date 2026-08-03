@@ -80,6 +80,19 @@ function mutatedValue(rand: () => number): unknown {
     out[key] = rand() < 0.75 ? plausible[Math.floor(rand() * plausible.length)] : rand() * 400 - 200;
   }
   if (rand() < 0.15) delete out[keys[Math.floor(rand() * keys.length)] ?? "x"];
+
+  // Identity is planted separately, and often, because the interesting
+  // hostile request is not a malformed one — it is a *well-formed* one that
+  // also claims to be somebody. Mutating only the value fields produced
+  // candidates that parsed but never carried an identity, so the property
+  // below asserted something it never actually reached: swapping the parser
+  // to read `id` off the request left this fuzzer entirely happy.
+  if (rand() < 0.5) {
+    const spoofed: unknown[] = ["a-flora", "other", "", 7, null, { id: "x" }];
+    for (const key of ["id", "authorId", "rev", "expiresAt", "cx", "cz"]) {
+      if (rand() < 0.5) out[key] = spoofed[Math.floor(rand() * spoofed.length)];
+    }
+  }
   return out;
 }
 
@@ -175,36 +188,70 @@ describe("readPlacement", () => {
   });
 });
 
+/**
+ * Report the first input that broke a property, or null if none did.
+ *
+ * Assertions live outside the loop rather than inside it, for two reasons.
+ * An `expect` is expensive enough that a hundred thousand of them dominated
+ * the whole suite's runtime and put these tests at the timeout, where they
+ * failed whenever the machine was busy. And a property test that asserts per
+ * iteration reports "expected true to be false" for case 13,847 rather than
+ * the value that caused it, which is the one thing worth knowing.
+ */
+function firstCounterexample(
+  runs: number,
+  seed: number,
+  holds: (raw: unknown) => boolean,
+): unknown {
+  const rand = makeRandom(seed);
+  for (let i = 0; i < runs; i += 1) {
+    const raw = i % 2 === 0 ? mutatedValue(rand) : randomValue(rand);
+    let ok: boolean;
+    try {
+      ok = holds(raw);
+    } catch {
+      return raw;
+    }
+    if (!ok) return raw;
+  }
+  return null;
+}
+
+/** Rendered so a failure names the input rather than an iteration number. */
+const NO_COUNTEREXAMPLE = null;
+
 describe("readPlacement, fuzzed", () => {
   it("never throws, whatever it is handed", () => {
-    const rand = makeRandom(0x5eed);
-    for (let i = 0; i < 20_000; i += 1) {
-      const raw = i % 2 === 0 ? mutatedValue(rand) : randomValue(rand);
-      expect(() => readPlacement(raw, CTX)).not.toThrow();
-    }
+    const bad = firstCounterexample(20_000, 0x5eed, (raw) => {
+      readPlacement(raw, CTX);
+      return true;
+    });
+    expect(bad).toBe(NO_COUNTEREXAMPLE);
   });
 
   it("never lets a request choose its own identity", () => {
-    const rand = makeRandom(0xc0ffee);
-    for (let i = 0; i < 20_000; i += 1) {
-      const place = readPlacement(i % 2 === 0 ? mutatedValue(rand) : randomValue(rand), CTX);
-      if (!place) continue;
-      expect(place.id).toBe(CTX.id);
-      expect(place.authorId).toBe(CTX.authorId);
-      expect(place.rev).toBe(CTX.rev);
-      expect(place.expiresAt).toBe(CTX.expiresAt);
-    }
+    const bad = firstCounterexample(20_000, 0xc0ffee, (raw) => {
+      const place = readPlacement(raw, CTX);
+      if (!place) return true;
+      return (
+        place.id === CTX.id &&
+        place.authorId === CTX.authorId &&
+        place.rev === CTX.rev &&
+        place.expiresAt === CTX.expiresAt
+      );
+    });
+    expect(bad).toBe(NO_COUNTEREXAMPLE);
   });
 
   it("never produces a placement with a non-finite coordinate", () => {
-    const rand = makeRandom(0xd15ea5e);
-    for (let i = 0; i < 20_000; i += 1) {
-      const place = readPlacement(randomValue(rand), CTX);
-      if (!place) continue;
-      for (const n of [place.x, place.y, place.z, place.yaw, place.scale, place.cx, place.cz]) {
-        expect(Number.isFinite(n)).toBe(true);
-      }
-    }
+    const bad = firstCounterexample(20_000, 0xd15ea5e, (raw) => {
+      const place = readPlacement(raw, CTX);
+      if (!place) return true;
+      return [place.x, place.y, place.z, place.yaw, place.scale, place.cx, place.cz].every(
+        (n) => Number.isFinite(n),
+      );
+    });
+    expect(bad).toBe(NO_COUNTEREXAMPLE);
   });
 });
 
@@ -259,38 +306,40 @@ describe("validatePlacement", () => {
 
 describe("validatePlacement, fuzzed", () => {
   it("never throws on a parsed placement", () => {
-    const rand = makeRandom(0xbadf00d);
-    for (let i = 0; i < 20_000; i += 1) {
-      const place = readPlacement(i % 2 === 0 ? mutatedValue(rand) : randomValue(rand), CTX);
-      if (!place) continue;
-      expect(() => validatePlacement(place, KINDS, LIMITS)).not.toThrow();
-    }
+    const bad = firstCounterexample(20_000, 0xbadf00d, (raw) => {
+      const place = readPlacement(raw, CTX);
+      if (!place) return true;
+      validatePlacement(place, KINDS, LIMITS);
+      return true;
+    });
+    expect(bad).toBe(NO_COUNTEREXAMPLE);
   });
 
   it("anything it accepts is inside every limit", () => {
     // The claim the whole design leans on: a fully successful injection is
     // boring, because whatever survives here is a catalogue object in a
     // palette colour inside the world's bounds that expires on its own.
-    const rand = makeRandom(0xfeedface);
     let accepted = 0;
-    for (let i = 0; i < 40_000; i += 1) {
-      const raw = i % 2 === 0 ? mutatedValue(rand) : randomValue(rand);
+    const bad = firstCounterexample(40_000, 0xfeedface, (raw) => {
       const place = readPlacement(raw, CTX);
-      if (!place || validatePlacement(place, KINDS, LIMITS) !== null) continue;
+      if (!place || validatePlacement(place, KINDS, LIMITS) !== null) return true;
       accepted += 1;
-      expect(KINDS.has(place.kind)).toBe(true);
-      expect(place.x).toBeGreaterThanOrEqual(LIMITS.minX);
-      expect(place.x).toBeLessThanOrEqual(LIMITS.maxX);
-      expect(place.z).toBeGreaterThanOrEqual(LIMITS.minZ);
-      expect(place.z).toBeLessThanOrEqual(LIMITS.maxZ);
-      expect(place.y).toBeGreaterThanOrEqual(LIMITS.minY);
-      expect(place.y).toBeLessThanOrEqual(LIMITS.maxY);
-      expect(place.scale).toBeGreaterThanOrEqual(LIMITS.minScale);
-      expect(place.scale).toBeLessThanOrEqual(LIMITS.maxScale);
-      expect(place.text === undefined || place.text.length <= LIMITS.maxTextLength).toBe(true);
-      expect(place.color === undefined || isPaletteColor(place.color)).toBe(true);
-      expect(place.expiresAt).toBe(CTX.expiresAt);
-    }
+      return (
+        KINDS.has(place.kind) &&
+        place.x >= LIMITS.minX &&
+        place.x <= LIMITS.maxX &&
+        place.z >= LIMITS.minZ &&
+        place.z <= LIMITS.maxZ &&
+        place.y >= LIMITS.minY &&
+        place.y <= LIMITS.maxY &&
+        place.scale >= LIMITS.minScale &&
+        place.scale <= LIMITS.maxScale &&
+        (place.text === undefined || place.text.length <= LIMITS.maxTextLength) &&
+        (place.color === undefined || isPaletteColor(place.color)) &&
+        place.expiresAt === CTX.expiresAt
+      );
+    });
+    expect(bad).toBe(NO_COUNTEREXAMPLE);
     // A guard against the test passing because nothing was ever accepted.
     expect(accepted).toBeGreaterThan(0);
   });
