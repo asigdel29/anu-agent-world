@@ -11,3 +11,6 @@ coverage/
 .DS_Store
 *.blend1
 *.blend2
+
+# Blender leaves a backup beside every save.
+*.blend1
