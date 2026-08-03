@@ -8,7 +8,7 @@ import { isSpeaking } from "./actorRegistry";
 import { LERP_SPEED, dampFraction, stepAngle } from "./remoteInterp";
 import { actors } from "./useRealtime";
 import { toonRamp } from "../assets/toonRamp";
-import { NEVER_RAYCAST, OUTLINE_INK, capsuleHullScale } from "../assets/outline";
+import { NEVER_RAYCAST, capsuleHullScale } from "../assets/outline";
 
 /**
  * One other body in the world.
@@ -25,9 +25,15 @@ import { NEVER_RAYCAST, OUTLINE_INK, capsuleHullScale } from "../assets/outline"
  * frame.
  */
 
-/** Agents are marked, so a visitor can tell who is not a person. */
-const VISITOR_COLOUR = "#6a885d";
-const AGENT_COLOUR = "#ff4f38";
+/**
+ * Agents are marked, so a visitor can tell who is not a person.
+ *
+ * By value rather than by hue, like everything else here. An agent is the
+ * darkest thing in the world and a visitor a step lighter, which survives
+ * both the monochrome palette and being seen at a distance through fog.
+ */
+const VISITOR_COLOUR = "#4a4a4a";
+const AGENT_COLOUR = "#000000";
 
 interface Props {
   readonly id: string;
@@ -80,14 +86,14 @@ export default function Actor({ id, height, radius }: Props) {
         raycast={NEVER_RAYCAST}
       >
         <capsuleGeometry args={[radius, height - radius * 2, 4, 12]} />
-        <meshBasicMaterial color={OUTLINE_INK} side={BackSide} depthWrite={false} />
+        <meshBasicMaterial color="#ffffff" side={BackSide} depthWrite={false} />
       </mesh>
       {/* A nose, so facing is readable while there is no model. */}
       <mesh position={[0, height * 0.7, radius + 0.1]}>
         <boxGeometry args={[0.12, 0.12, 0.3]} />
         {/* Flat and unlit: the facing marker belongs to the outline
             language rather than to the lit surfaces. */}
-        <meshBasicMaterial color="#4e3c40" />
+        <meshBasicMaterial color="#ffffff" />
       </mesh>
       {/* Speech is marked here and read here; the words themselves are drawn
           by the overlay, which can lay out text without shipping a font into

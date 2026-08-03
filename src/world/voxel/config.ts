@@ -106,10 +106,18 @@ export const voxelConfig: WorldConfig = {
     // validator holds this against the load radius, because fog that stops
     // short of where chunks stop is worse than none: it draws attention to
     // the boundary instead of covering it.
-    fog: { color: "#dbeaf2", near: CHUNK * 1.6, far: CHUNK * 3 },
-    background: { kind: "color", color: "#dbeaf2" },
-    sun: { direction: [-0.4, -1, -0.3], color: "#fff4e2", intensity: 1.0 },
-    ambient: { skyColor: "#cfe3f2", groundColor: "#b6a894", intensity: 0.5 },
+    fog: { color: "#ffffff", near: CHUNK * 1.6, far: CHUNK * 3 },
+    background: { kind: "color", color: "#ffffff" },
+    // Neutral light. Any warmth or coolness here would put a hue back into a
+    // world whose whole premise is that it has none, and it would show most
+    // on the large flat surfaces that make up almost everything.
+    // Key and fill sum to one, deliberately. A stepped ramp has a top, and
+    // light that goes past it puts every face on the last step -- which in a
+    // world with no colour to fall back on is a white screen. The island hit
+    // this and was corrected; these numbers were written fresh and walked
+    // straight back into it.
+    sun: { direction: [-0.4, -1, -0.3], color: "#ffffff", intensity: 0.7 },
+    ambient: { skyColor: "#ffffff", groundColor: "#bbbbbb", intensity: 0.3 },
     // The ground does not float. It is ground.
     drift: null,
   },

@@ -7,10 +7,21 @@
  * It is also the same argument as the prop catalogue: an agent cannot invent
  * a block, because a block is a number in this table and nothing else.
  *
- * Blocks are flat colours rather than textures. At one block per unit and a
+ * Blocks are flat tones rather than textures. At one block per unit and a
  * stepped light ramp, a texture would be sampled at roughly one texel per
- * face and read as noise, and the outline is doing the work a texture's edge
- * detail normally does.
+ * face and read as noise.
+ *
+ * **There is no colour here, only value.** That is a real constraint rather
+ * than a repaint: with no hue to separate grass from stone, the only things
+ * telling one block from another are how light it is and which way its faces
+ * point. Two blocks a few per cent apart in value are the same block to
+ * anybody looking, so the tones below are spaced widely and deliberately, and
+ * the ones that matter most — the ground you walk on against the water you
+ * fall into — are furthest apart.
+ *
+ * The stepped ramp does the rest. A white block's top, sides and underside
+ * land on different steps, which is what makes a cube read as a cube without
+ * a single line being drawn.
  */
 
 /** Air is zero so an empty chunk is a zeroed buffer. */
@@ -29,19 +40,26 @@ export interface BlockKind {
 
 export const BLOCKS: readonly BlockKind[] = [
   { id: 0, name: "air", color: "#000000", solid: false, placeable: false },
-  { id: 1, name: "grass", color: "#a8d377", solid: true, placeable: true },
-  { id: 2, name: "soil", color: "#805749", solid: true, placeable: true },
-  { id: 3, name: "stone", color: "#7d7b79", solid: true, placeable: true },
-  { id: 4, name: "sand", color: "#cab1ad", solid: true, placeable: true },
-  // Water is solid to the mesher and not to the character: it is drawn as a
-  // surface but walked into, which is the one place those two ideas differ.
-  { id: 5, name: "water", color: "#64a5c8", solid: false, placeable: false },
-  { id: 6, name: "wood", color: "#97654e", solid: true, placeable: true },
-  { id: 7, name: "leaves", color: "#43683e", solid: true, placeable: true },
-  { id: 8, name: "plank", color: "#c4b1a1", solid: true, placeable: true },
-  { id: 9, name: "slate", color: "#4e3c40", solid: true, placeable: true },
-  { id: 10, name: "clay", color: "#98837f", solid: true, placeable: true },
-  { id: 11, name: "lamp", color: "#ff4f38", solid: true, placeable: true },
+  // The ground sits clearly below the sky's white rather than near it. A
+  // world the same value as its background has no horizon and no silhouette,
+  // and the first attempt at this palette put grass within four per cent of
+  // the sky -- correct geometry, invisible landscape.
+  { id: 1, name: "grass", color: "#dedede", solid: true, placeable: true },
+  { id: 2, name: "soil", color: "#a9a9a9", solid: true, placeable: true },
+  { id: 3, name: "stone", color: "#8c8c8c", solid: true, placeable: true },
+  { id: 4, name: "sand", color: "#cfcfcf", solid: true, placeable: true },
+  // Water is drawn but walked into: the one place "visible" and "solid" part
+  // company. Dark, because a light lake in a light world is a hole nobody
+  // sees until they are in it.
+  { id: 5, name: "water", color: "#5a5a5a", solid: false, placeable: false },
+  { id: 6, name: "wood", color: "#4a4a4a", solid: true, placeable: true },
+  { id: 7, name: "leaves", color: "#2e2e2e", solid: true, placeable: true },
+  { id: 8, name: "plank", color: "#c2c2c2", solid: true, placeable: true },
+  { id: 9, name: "slate", color: "#1c1c1c", solid: true, placeable: true },
+  { id: 10, name: "clay", color: "#767676", solid: true, placeable: true },
+  // The one pure black. Reserved for whatever should read as made rather than
+  // grown, which in a world built by agents is worth being able to see.
+  { id: 11, name: "lamp", color: "#000000", solid: true, placeable: true },
 ] as const;
 
 export const BLOCK_BY_NAME: ReadonlyMap<string, BlockKind> = new Map(
