@@ -38,6 +38,15 @@ const BUDGETS = [
   // the whole value of having one.
   { name: "r3f", maxKb: 80 },
   { name: "index", maxKb: 70 },
+  // Analytics is loaded after the world rather than with it, so its size does
+  // not delay anything. It is budgeted anyway: "off the critical path" is a
+  // reason for it to be large, not a reason to stop looking.
+  //
+  // Optional, because the key is replaced at build time: with none set, the
+  // guard around the import folds to a constant, the dynamic import becomes
+  // unreachable, and a build with no analytics configured ships not one byte
+  // of it. That is the desirable outcome and not a missing chunk.
+  { name: "analytics", maxKb: 90, optional: true },
 ];
 
 /** Anything not matched by a budget must still not be large on its own. */
@@ -70,6 +79,7 @@ for (const budget of BUDGETS) {
   // Chunk names carry a content hash, so match the group prefix.
   const group = measured.filter((m) => m.file.startsWith(`${budget.name}-`));
   if (group.length === 0) {
+    if (budget.optional) continue;
     problems.push(
       `no chunk named "${budget.name}" was emitted; the bundler's chunk groups ` +
         `have changed and this budget is no longer measuring anything`,

@@ -8,6 +8,7 @@ import type { Sample } from "./clockSync";
 import { addSample, bestOffset, sampleFrom } from "./clockSync";
 import { applyFrame, clearActors, createActorRegistry, pruneActors } from "./actorRegistry";
 import { retryDelay, shouldRetry } from "./reconnect";
+import { record } from "../../analytics/analytics";
 
 /**
  * The socket, and nothing else.
@@ -115,6 +116,7 @@ export function useRealtime({ host, playerId }: RealtimeOptions): void {
     const url = roomUrl(host, playerId);
     if (!url) {
       store({ status: "solo" });
+      record("relay_unavailable", { reason: "not_configured" });
       return undefined;
     }
 
@@ -123,6 +125,7 @@ export function useRealtime({ host, playerId }: RealtimeOptions): void {
     let lastSent = -Infinity;
     let samples: Sample[] = [];
     let pingSentAt = 0;
+    let openedAt = 0;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
     // Rebuilt only when membership changes, so a moving room never allocates
@@ -160,6 +163,12 @@ export function useRealtime({ host, playerId }: RealtimeOptions): void {
     const ingest = (frame: ServerFrame, now: number): void => {
       if (frame.type === "hello") {
         store({ selfId: frame.id, status: "connected" });
+        record("relay_connected", {
+          // How long the world took to become shared, and how far apart the
+          // clocks were. Both decide whether two people see the same sky.
+          connect_ms: Math.max(0, now - openedAt),
+          attempt,
+        });
         // The first sample comes from the greeting itself, so the sky is
         // right on the first frame rather than fifteen seconds in.
         samples = addSample(samples, sampleFrom(pingSentAt || now, now, frame.s));
@@ -173,9 +182,21 @@ export function useRealtime({ host, playerId }: RealtimeOptions): void {
       }
       if (frame.type === "world") {
         worldSink.apply(frame.ops);
+        // Counted, never quoted: a placement can carry words somebody wrote.
+        let placed = 0;
+        let removed = 0;
+        for (const op of frame.ops) {
+          if (op.t === "upsert") placed += 1;
+          else removed += 1;
+        }
+        if (placed > 0) record("block_placed", { count: placed });
+        if (removed > 0) record("block_removed", { count: removed });
         return;
       }
       if (frame.type === "refused") {
+        // The reason is one of a fixed set the relay writes, so it is safe to
+        // send and is the only way quota friction becomes visible at all.
+        record("build_refused", { reason: frame.reason });
         // Only the asker is told, and only so a build UI can say so. It is
         // not an error: a refusal is the system working.
         return;
@@ -193,12 +214,14 @@ export function useRealtime({ host, playerId }: RealtimeOptions): void {
         ws = new WebSocket(url);
       } catch {
         // A relay that cannot be reached is a quiet world, not a broken one.
+        record("relay_unavailable", { reason: "refused" });
         schedule();
         return;
       }
       socket.current = ws;
 
       ws.onopen = () => {
+        openedAt = Date.now();
         attempt = 0;
         pingSentAt = Date.now();
         send({ type: "ping", t: pingSentAt });
@@ -217,6 +240,9 @@ export function useRealtime({ host, playerId }: RealtimeOptions): void {
         if (clearActors(actors)) publishRoster();
         store({ status: "solo", selfId: null });
         realtime.offset = null;
+        // Degrading to solo is designed behaviour, so it has to be
+        // distinguishable in the data from the world being broken.
+        record("relay_unavailable", { reason: "closed", code: event.code });
         if (shouldRetry(event.code)) schedule();
       };
 

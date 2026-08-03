@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+import { record } from "../analytics/analytics";
+
 /**
  * The written content, and the rule that only one piece of it is up at once.
  *
@@ -48,6 +50,9 @@ export const usePanelStore = create<PanelStore>((set) => ({
  */
 export function openPanel(panel: Panel): void {
   usePanelStore.getState().openPanel(panel);
+  // The identifier, never the words: panel bodies will eventually carry text
+  // a visitor or a model wrote.
+  record("panel_opened", { panel_id: panel.id });
 }
 
 export function closePanel(): void {
