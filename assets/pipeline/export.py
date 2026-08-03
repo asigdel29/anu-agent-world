@@ -19,9 +19,17 @@ import bpy
 # until it is put on the path.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from catalog import export_catalog  # noqa: E402
 from constants import write_constants  # noqa: E402
 from slice_world import export_chunks, slice_world, write_manifest  # noqa: E402
-from world_config import CHUNK_SIZE, CLIFF_RISE, MAX_RISER, RISER_EPSILON, WORLDS  # noqa: E402
+from world_config import (  # noqa: E402
+    CATALOG_INTENTS,
+    CHUNK_SIZE,
+    CLIFF_RISE,
+    MAX_RISER,
+    RISER_EPSILON,
+    WORLDS,
+)
 
 
 def spawn_cells(spawn, chunk_size):
@@ -74,6 +82,13 @@ def main():
     )
     print(f"[pipeline] wrote {path}")
     print(f"[pipeline] bounds x {bounds[0]:.2f}..{bounds[1]:.2f} y {bounds[2]:.2f}..{bounds[3]:.2f}")
+
+    catalog_path, kinds = export_catalog(
+        CATALOG_INTENTS,
+        os.path.join(root, "public/models/catalog"),
+        os.path.join(root, world["out_data"]),
+    )
+    print(f"[pipeline] wrote {catalog_path} with {len(kinds)} kinds")
 
     eager = sum(1 for c in chunks if c.get("spawnEager"))
     if eager == 0:

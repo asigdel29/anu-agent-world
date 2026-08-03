@@ -57,6 +57,25 @@ Derived from the jump rather than picked, so tuning the jump moves the
 boundary with it instead of leaving a number here that used to be right.
 """
 
+CATALOG_INTENTS = {
+    # What the geometry cannot tell you. `solid` decides whether a thing has
+    # collision at all, `standable` whether its top contributes ground height,
+    # and `maxInstances` is the ceiling that makes a compromised model boring:
+    # a successful injection asking for ten thousand lanterns gets this number.
+    "bench":   {"solid": True,  "standable": True,  "textSlots": 0, "maxInstances": 120},
+    "crate":   {"solid": True,  "standable": True,  "textSlots": 0, "maxInstances": 300},
+    "lantern": {"solid": True,  "standable": False, "textSlots": 0, "maxInstances": 200},
+    "planter": {"solid": True,  "standable": True,  "textSlots": 0, "maxInstances": 200},
+    "post":    {"solid": True,  "standable": False, "textSlots": 0, "maxInstances": 300},
+    # Decorative on purpose: a shrub you collide with is a shrub that traps
+    # somebody in a corner.
+    "shrub":   {"solid": False, "standable": False, "textSlots": 0, "maxInstances": 400},
+    # The one kind carrying words. Visitor and agent text lands here, which is
+    # why it is the only kind whose content is filtered before broadcast.
+    "sign":    {"solid": True,  "standable": False, "textSlots": 1, "maxInstances": 60},
+    "stone":   {"solid": True,  "standable": True,  "textSlots": 0, "maxInstances": 250},
+}
+
 WORLDS = {
     "island": {
         "blend": "assets/world.blend",

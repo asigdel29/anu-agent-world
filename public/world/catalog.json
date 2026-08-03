@@ -1,0 +1,143 @@
+{
+  "kinds": [
+    {
+      "id": "bench",
+      "model": "prop_bench",
+      "sizeX": 1.8,
+      "sizeY": 0.45,
+      "sizeZ": 0.5,
+      "collider": {
+        "halfX": 0.9,
+        "halfY": 0.225,
+        "halfZ": 0.25,
+        "offsetY": 0.225
+      },
+      "bounds": 1.305,
+      "standable": true,
+      "textSlots": 0,
+      "maxInstances": 120,
+      "material": "dynamic"
+    },
+    {
+      "id": "crate",
+      "model": "prop_crate",
+      "sizeX": 0.85,
+      "sizeY": 0.85,
+      "sizeZ": 0.85,
+      "collider": {
+        "halfX": 0.425,
+        "halfY": 0.425,
+        "halfZ": 0.425,
+        "offsetY": 0.425
+      },
+      "bounds": 0.6163,
+      "standable": true,
+      "textSlots": 0,
+      "maxInstances": 300,
+      "material": "dynamic"
+    },
+    {
+      "id": "lantern",
+      "model": "prop_lantern",
+      "sizeX": 0.34,
+      "sizeY": 2.24,
+      "sizeZ": 0.34,
+      "collider": {
+        "halfX": 0.17,
+        "halfY": 1.12,
+        "halfZ": 0.17,
+        "offsetY": 1.12
+      },
+      "bounds": 1.624,
+      "standable": false,
+      "textSlots": 0,
+      "maxInstances": 200,
+      "material": "dynamic"
+    },
+    {
+      "id": "planter",
+      "model": "prop_planter",
+      "sizeX": 1.0,
+      "sizeY": 0.57,
+      "sizeZ": 1.0,
+      "collider": {
+        "halfX": 0.5,
+        "halfY": 0.285,
+        "halfZ": 0.5,
+        "offsetY": 0.285
+      },
+      "bounds": 0.725,
+      "standable": true,
+      "textSlots": 0,
+      "maxInstances": 200,
+      "material": "dynamic"
+    },
+    {
+      "id": "post",
+      "model": "prop_post",
+      "sizeX": 0.22,
+      "sizeY": 1.5,
+      "sizeZ": 0.22,
+      "collider": {
+        "halfX": 0.11,
+        "halfY": 0.75,
+        "halfZ": 0.11,
+        "offsetY": 0.75
+      },
+      "bounds": 1.0875,
+      "standable": false,
+      "textSlots": 0,
+      "maxInstances": 300,
+      "material": "dynamic"
+    },
+    {
+      "id": "shrub",
+      "model": "prop_shrub",
+      "sizeX": 0.8,
+      "sizeY": 0.9,
+      "sizeZ": 0.8,
+      "collider": null,
+      "bounds": 0.6525,
+      "standable": false,
+      "textSlots": 0,
+      "maxInstances": 400,
+      "material": "dynamic"
+    },
+    {
+      "id": "sign",
+      "model": "prop_sign",
+      "sizeX": 1.0,
+      "sizeY": 1.72,
+      "sizeZ": 0.14,
+      "collider": {
+        "halfX": 0.5,
+        "halfY": 0.86,
+        "halfZ": 0.07,
+        "offsetY": 0.86
+      },
+      "bounds": 1.247,
+      "standable": false,
+      "textSlots": 1,
+      "maxInstances": 60,
+      "material": "dynamic"
+    },
+    {
+      "id": "stone",
+      "model": "prop_stone",
+      "sizeX": 1.1,
+      "sizeY": 0.95,
+      "sizeZ": 0.95,
+      "collider": {
+        "halfX": 0.55,
+        "halfY": 0.475,
+        "halfZ": 0.475,
+        "offsetY": 0.475
+      },
+      "bounds": 0.7975,
+      "standable": true,
+      "textSlots": 0,
+      "maxInstances": 250,
+      "material": "dynamic"
+    }
+  ]
+}
