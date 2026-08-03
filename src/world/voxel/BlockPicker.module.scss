@@ -1,0 +1,77 @@
+@use "../../styles/tokens" as *;
+
+// Bottom centre, above the controls hint and clear of the appearance button in
+// the corner. Wraps rather than scrolls: a row that scrolls hides slots, and a
+// slot you cannot see is a block you will not use.
+
+.strip {
+  position: fixed;
+  left: 50%;
+  bottom: 4.4rem;
+  z-index: 14;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem;
+  max-width: min(44rem, calc(100vw - 2rem));
+  padding: 0.4rem 0.5rem;
+  transform: translateX(-50%);
+  border-radius: $radius-card;
+  background: $surface-raised;
+  box-shadow: $shadow-card;
+  font-family: $font-ui;
+}
+
+.slot,
+.chosen {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.45rem;
+  border: 0;
+  border-radius: $radius-small;
+  font-family: $font-ui;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition:
+    background $duration-micro $ease,
+    color $duration-micro $ease;
+}
+
+.slot {
+  background: transparent;
+  color: $ink-subtle;
+
+  &:hover {
+    background: $surface-sunken;
+    color: $ink;
+  }
+}
+
+// Marked by value, like everything else in this world.
+.chosen {
+  background: $ink;
+  color: $surface;
+}
+
+.swatch {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex: none;
+  border-radius: 1px;
+  // The hairline is what separates a pale swatch from a pale panel, and the
+  // palest block here is very nearly the panel's own colour.
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 22%);
+}
+
+.name {
+  text-transform: lowercase;
+}
+
+.hint {
+  width: 100%;
+  padding-top: 0.15rem;
+  text-align: center;
+  font-size: 0.7rem;
+  color: $ink-subtle;
+}

@@ -9,6 +9,7 @@ import { islandConfig } from "./world/island/config";
 import { islandSeed } from "./world/island/seed";
 import { voxelConfig } from "./world/voxel/config";
 import AvatarPicker from "./ui/AvatarPicker";
+import BlockPicker from "./world/voxel/BlockPicker";
 import ControlsHint from "./ui/ControlsHint";
 import InteractPrompt from "./ui/InteractPrompt";
 import Panel from "./ui/Panel";
@@ -85,6 +86,9 @@ export default function App() {
       <InteractPrompt />
       <Panel />
       <AvatarPicker />
+      {/* Building is a property of this world rather than of the engine, so
+          its interface lives with it and mounts only when it is loaded. */}
+      {WORLD !== "greybox" && WORLD !== "island" && <BlockPicker />}
       <TouchControls />
       <RotateHint />
       {DEBUG && (
