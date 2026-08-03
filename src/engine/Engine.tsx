@@ -16,6 +16,7 @@ import { useRealtime, worldSink } from "./net/useRealtime";
 import { visitorId } from "./net/visitorId";
 import { world } from "./config/worldConfig";
 import Player from "./Player";
+import type { CatalogGeometry } from "./assets/catalogGeometry";
 
 /** Read once, so the probe is either mounted for the session or never. */
 const DEBUG = isDebugEnabled();
@@ -27,6 +28,8 @@ interface Props {
   catalog: PropCatalog;
   /** What a placement in this world must satisfy. */
   placementLimits: PlacementLimits;
+  /** Authored prop geometry, for a world that ships a catalogue file. */
+  catalogGeometry?: CatalogGeometry | undefined;
 }
 
 /**
@@ -36,7 +39,7 @@ interface Props {
  * being written here, which is what keeps this component free of any
  * particular world's facts.
  */
-export default function Engine({ children, catalog, placementLimits }: Props) {
+export default function Engine({ children, catalog, placementLimits, catalogGeometry }: Props) {
   const cfg = useMemo(() => world(), []);
   const registry = useMemo(() => createColliderRegistry(), []);
   const placements = useMemo(
@@ -96,7 +99,7 @@ export default function Engine({ children, catalog, placementLimits }: Props) {
       )}
 
       {children(registry)}
-      <PlacementLayer catalog={catalog} snapshot={snapshot} />
+      <PlacementLayer catalog={catalog} snapshot={snapshot} geometry={catalogGeometry} />
       <ActorLayer
         height={cfg.locomotion.playerHeight}
         radius={cfg.locomotion.playerRadius}
