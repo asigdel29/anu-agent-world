@@ -1,4 +1,3 @@
-import { BackSide } from "three";
 import { useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import type { Group } from "three";
@@ -26,8 +25,9 @@ import { record } from "../analytics/analytics";
 import type { PlacementSnapshot, PlacementStore } from "./placements/placementStore";
 import { subjectPosition } from "./streaming/chunkStore";
 import { world } from "./config/worldConfig";
-import { toonRamp } from "./assets/toonRamp";
-import { NEVER_RAYCAST, capsuleHullScale } from "./assets/outline";
+import AvatarBody from "./avatar/AvatarBody";
+import { avatarFromId, encodeAvatar } from "../../protocol/avatar";
+import { visitorId } from "./net/visitorId";
 
 /**
  * The character, and the one ordered pass over everything that moves.
@@ -41,17 +41,6 @@ import { NEVER_RAYCAST, capsuleHullScale } from "./assets/outline";
  * that also owned raycasting, camera maths, interaction scanning, footsteps,
  * and a branch for a second camera owner. Everything here delegates.
  */
-
-/**
- * The stand-in body, until an avatar is chosen.
- *
- * Dark on a light world rather than coloured. A figure is the one thing on
- * screen that must never be mistaken for terrain, and in a world with no hue
- * the only way to say that is with value: everything else here is light, so
- * the person is dark.
- */
-const AVATAR_INK = "#1c1c1c";
-const AVATAR_EDGE = "#ffffff";
 
 /** How often the world is searched for something within reach. */
 const SCAN_INTERVAL_SEC = 0.15;
@@ -86,6 +75,10 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
   const cfg = useMemo(() => world(), []);
   const camera = useThree((state) => state.camera);
   const group = useRef<Group>(null);
+  // Derived from who this visitor is rather than chosen, for now: everybody
+  // arrives looking different, and nobody can change it yet. Computed once —
+  // it is a pure function of an identifier that does not change.
+  const code = useMemo(() => encodeAvatar(avatarFromId(visitorId())), []);
 
   // Terrain and placements answer as one oracle, so movement never learns
   // that placements exist. The hash is read through a callback rather than
@@ -240,6 +233,7 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
     wire.pos[2] = state.z;
     wire.yaw = state.yaw;
     wire.action = state.grounded ? (Math.hypot(state.vx, state.vz) > 0.1 ? "walk" : "idle") : "air";
+    wire.character = code;
     realtime.sendState(wire, Date.now());
 
     // 6. Look for something to walk up to. Several times a second rather than
@@ -307,29 +301,11 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
 
   return (
     <group ref={group}>
-      {/* A stand-in body. The proportions matter — they are what the collision
-          constants describe — but the styling does not, yet. */}
-      <mesh position={[0, height / 2, 0]}>
-        <capsuleGeometry args={[radius, height - radius * 2, 4, 12]} />
-        <meshToonMaterial color={AVATAR_INK} gradientMap={toonRamp()} />
-      </mesh>
-      {/* The line. A capsule grows uniformly rather than per axis: its radius
-          already governs both dimensions, so one factor keeps the margin even. */}
-      <mesh
-        position={[0, height / 2, 0]}
-        scale={capsuleHullScale(radius, height)}
-        raycast={NEVER_RAYCAST}
-      >
-        <capsuleGeometry args={[radius, height - radius * 2, 4, 12]} />
-        <meshBasicMaterial color={AVATAR_EDGE} side={BackSide} depthWrite={false} />
-      </mesh>
-      {/* A nose, so facing is readable while there is no model. */}
-      <mesh position={[0, height * 0.7, radius + 0.1]}>
-        <boxGeometry args={[0.12, 0.12, 0.3]} />
-        {/* Flat and unlit: the facing marker belongs to the outline
-            language rather than to the lit surfaces. */}
-        <meshBasicMaterial color="#4e3c40" />
-      </mesh>
+      {/* The body this visitor chose. Its proportions still matter — they are
+          what the collision constants describe — so build varies within the
+          collision radius rather than beyond it, and no choice can put a
+          shoulder through a wall the controller thinks is clear. */}
+      <AvatarBody code={code} height={height} radius={radius} />
     </group>
   );
 }
