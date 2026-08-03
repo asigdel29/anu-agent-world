@@ -13,7 +13,8 @@
     "size": "node scripts/checkBundleSize.mjs",
     "test:watch": "vitest",
     "relay:dev": "wrangler dev",
-    "relay:deploy": "wrangler deploy"
+    "relay:deploy": "wrangler deploy",
+    "start": "node serve.mjs"
   },
   "dependencies": {
     "@react-three/drei": "10.7.7",
