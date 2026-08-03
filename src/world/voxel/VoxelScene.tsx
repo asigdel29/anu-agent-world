@@ -8,6 +8,7 @@ import { radiiForDevice } from "../../engine/streaming/chunkGrid";
 import { voxelConfig as CFG } from "./config";
 import { voxelChunks } from "./manifest";
 import VoxelChunk from "./VoxelChunk";
+import BuildTool from "./BuildTool";
 
 /**
  * The voxel world: lighting, and terrain generated around whoever is in it.
@@ -54,6 +55,8 @@ export default function VoxelScene({ colliderRegistry }: Props) {
         colliderRegistry={colliderRegistry}
         renderChunk={renderChunk}
       />
+
+      <BuildTool />
     </>
   );
 }
