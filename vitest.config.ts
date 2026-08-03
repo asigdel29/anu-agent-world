@@ -18,7 +18,14 @@ export default defineConfig({
         test: {
           name: "worker",
           environment: "node",
-          include: ["server/**/*.test.ts", "shared/**/*.test.ts", "protocol/**/*.test.ts"],
+          include: [
+            "server/**/*.test.ts",
+            "shared/**/*.test.ts",
+            "protocol/**/*.test.ts",
+            // The pipeline's output is checked here rather than in the client
+            // project: it reads files from disk and needs no DOM.
+            "assets/**/*.test.ts",
+          ],
         },
       },
     ],

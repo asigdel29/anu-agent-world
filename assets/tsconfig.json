@@ -1,0 +1,13 @@
+{
+  // The pipeline's checks read files from disk, so they need Node's types and
+  // not the browser's. Its own project for the same reason the server has one:
+  // three environments that each think they own `fetch` and `Response` cannot
+  // share a `lib`, and keeping them apart makes a misplaced import a compile
+  // error rather than a puzzle at runtime.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "../src/engine/streaming/chunkGrid.ts"]
+}
