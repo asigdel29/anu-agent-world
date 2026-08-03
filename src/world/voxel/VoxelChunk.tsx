@@ -4,6 +4,8 @@ import { BufferAttribute, BufferGeometry } from "three";
 import { toonRamp } from "../../engine/assets/toonRamp";
 import type { ChunkSpec } from "../../engine/streaming/chunkGrid";
 import { generateChunk } from "./chunkData";
+import { editRevAround } from "./edits";
+import { useBuildStore, voxelEdits } from "./buildStore";
 import { meshChunk } from "./mesher";
 import { VOXEL_SEED, voxelConfig } from "./config";
 
@@ -36,9 +38,15 @@ interface Props {
 }
 
 export default function VoxelChunk({ spec }: Props) {
+  // Every chunk watches one global counter, and all but the changed one do
+  // nothing about it: the memo below keys on this chunk's own cells, so a
+  // distant edit costs a re-render that returns the geometry it already had.
+  useBuildStore((s) => s.rev);
+  const editRev = editRevAround(voxelEdits, spec.cx, spec.cz);
+
   const { geometry } = useMemo(() => {
     const size = voxelConfig.units.chunkSize;
-    const data = generateChunk(spec.cx, spec.cz, size, VOXEL_SEED);
+    const data = generateChunk(spec.cx, spec.cz, size, VOXEL_SEED, undefined, voxelEdits);
     const mesh = meshChunk(data);
 
     const built = new BufferGeometry();
@@ -47,7 +55,12 @@ export default function VoxelChunk({ spec }: Props) {
     built.setAttribute("color", new BufferAttribute(mesh.colours, 3));
 
     return { geometry: built };
-  }, [spec.cx, spec.cz]);
+    // `editRev` is not read in the body and is not a redundant dependency:
+    // `voxelEdits` is a mutable store, so its contents cannot be a dependency,
+    // and its revision is the only value that changes when they do. Removing
+    // it leaves a chunk drawing the terrain as it was before anybody built.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spec.cx, spec.cz, editRev]);
 
   const size = voxelConfig.units.chunkSize;
 
