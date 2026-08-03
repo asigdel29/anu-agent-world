@@ -1,0 +1,117 @@
+@use "../styles/tokens" as *;
+
+// Bottom left, opposite the touch controls, and small enough that the body it
+// edits stays visible — which is the whole reason it needs no preview.
+
+.launch {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 15;
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  border-radius: $radius-card;
+  background: $surface-raised;
+  box-shadow: $shadow-card;
+  font-family: $font-ui;
+  font-size: 0.85rem;
+  color: $ink-muted;
+  cursor: pointer;
+  transition: color $duration-micro $ease;
+
+  &:hover {
+    color: $ink;
+  }
+}
+
+.panel {
+  @include panel;
+
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 15;
+  width: min(20rem, calc(100vw - 2rem));
+  padding: 0.9rem 1rem 1rem;
+  font-family: $font-ui;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.7rem;
+
+  h2 {
+    @include quiet-display;
+
+    margin: 0;
+    font-size: 1.05rem;
+  }
+}
+
+.close {
+  padding: 0.2rem 0.5rem;
+  border: 0;
+  border-radius: $radius-small;
+  background: $surface-sunken;
+  font-family: $font-ui;
+  font-size: 0.8rem;
+  color: $ink-muted;
+  cursor: pointer;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.45rem;
+}
+
+.label {
+  flex: none;
+  width: 4rem;
+  font-size: 0.8rem;
+  color: $ink-subtle;
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.option,
+.chosen {
+  padding: 0.22rem 0.5rem;
+  border: 0;
+  border-radius: $radius-small;
+  font-family: $font-ui;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition:
+    background $duration-micro $ease,
+    color $duration-micro $ease;
+}
+
+.option {
+  background: $surface-sunken;
+  color: $ink-muted;
+
+  &:hover {
+    color: $ink;
+  }
+}
+
+// The chosen option is marked by value, matching how the world marks
+// everything else — the interface and the scene share one language.
+.chosen {
+  background: $ink;
+  color: $surface;
+}
+
+.note {
+  margin: 0.7rem 0 0;
+  font-size: 0.75rem;
+  color: $ink-subtle;
+}

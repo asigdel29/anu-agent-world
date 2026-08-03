@@ -40,6 +40,16 @@
     "file": "src/engine/net/useRealtime.ts"
   },
   {
+    "event_name": "avatar_opened",
+    "event_description": "A visitor opened the appearance picker, which is the first half of whether configuring an avatar is something people actually do.",
+    "file": "src/ui/AvatarPicker.tsx"
+  },
+  {
+    "event_name": "avatar_changed",
+    "event_description": "A visitor changed one part of their appearance, carrying which part it was, so an option nobody ever picks is visible as one.",
+    "file": "src/ui/AvatarPicker.tsx"
+  },
+  {
     "event_name": "frame_budget_sampled",
     "event_description": "One reading of frame rate, draw calls and chunk count per session, so slow devices are visible without sampling every frame.",
     "file": "src/engine/debug/debugStats.ts"
