@@ -7,6 +7,7 @@ import type { PropKind } from "./catalogTypes";
 import type { Placement } from "./placementOps";
 import { toonRamp } from "../assets/toonRamp";
 import { NEVER_RAYCAST, OUTLINE_INK, OUTLINE_MARGIN, hullSize } from "../assets/outline";
+import type { BufferGeometry } from "three";
 
 /**
  * Every live instance of one kind, drawn in a single call.
@@ -38,9 +39,11 @@ interface Props {
   instances: readonly Placement[];
   /** Bumped when `instances` changes, so uploads can be skipped otherwise. */
   version: number;
+  /** Authored geometry for this kind, when the catalogue has been loaded. */
+  geometry?: BufferGeometry | undefined;
 }
 
-export default function InstancedKind({ kind, instances, version }: Props) {
+export default function InstancedKind({ kind, instances, version, geometry }: Props) {
   const mesh = useRef<InstancedMesh>(null);
   // The outline shares this batch's matrices exactly, so it cannot be scaled
   // separately; its geometry is built larger instead.
@@ -126,7 +129,9 @@ export default function InstancedKind({ kind, instances, version }: Props) {
       args={[undefined, undefined, kind.maxInstances]}
       count={0}
     >
-      {kind.shape === "box" ? (
+      {geometry ? (
+        <primitive object={geometry} attach="geometry" />
+      ) : kind.shape === "box" ? (
         <boxGeometry args={[kind.sizeX, kind.sizeY, kind.sizeZ]} />
       ) : (
         <cylinderGeometry args={[kind.sizeX / 2, kind.sizeX / 2, kind.sizeY, 12]} />
@@ -143,7 +148,11 @@ export default function InstancedKind({ kind, instances, version }: Props) {
       count={0}
       raycast={NEVER_RAYCAST}
     >
-      {kind.shape === "box" ? (
+      {/* The hull for authored geometry is the kind's measured box rather
+          than a swollen copy of the mesh: an inverted hull of a concave prop
+          turns inside out at the concavity, and a box silhouette around a
+          prop this size is indistinguishable from one that follows it. */}
+      {kind.shape === "box" || geometry ? (
         <boxGeometry args={outlined} />
       ) : (
         <cylinderGeometry args={[outlined[0] / 2, outlined[0] / 2, outlined[1], 12]} />

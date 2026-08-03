@@ -5,6 +5,7 @@ import type { PropCatalog } from "./catalogTypes";
 import InstancedKind from "./InstancedKind";
 import type { Placement } from "./placementOps";
 import type { PlacementSnapshot } from "./placementStore";
+import type { CatalogGeometry } from "../assets/catalogGeometry";
 
 /**
  * Everything built in the world, grouped into one batch per kind.
@@ -19,9 +20,11 @@ const DEBUG = isDebugEnabled();
 interface Props {
   catalog: PropCatalog;
   snapshot: PlacementSnapshot;
+  /** Authored geometry by node name, when a world has a catalogue file. */
+  geometry?: CatalogGeometry | undefined;
 }
 
-export default function PlacementLayer({ catalog, snapshot }: Props) {
+export default function PlacementLayer({ catalog, snapshot, geometry }: Props) {
   const byKind = useMemo(() => {
     const groups = new Map<string, Placement[]>();
     for (const place of snapshot.placements.values()) {
@@ -52,6 +55,7 @@ export default function PlacementLayer({ catalog, snapshot }: Props) {
             kind={kind}
             instances={instances}
             version={snapshot.version}
+            geometry={kind.model ? geometry?.get(kind.model) : undefined}
           />
         );
       })}

@@ -41,8 +41,19 @@ export interface KindCollider {
 
 export interface PropKind {
   readonly id: string;
-  /** Primitive to draw. Real worlds add a glTF node reference alongside this. */
+  /**
+   * Primitive to draw when no authored geometry is available.
+   *
+   * Kept as the fallback rather than removed: the grey box has no catalogue
+   * file, and a world that can only render art is a world that cannot be
+   * tested before the art exists.
+   */
   readonly shape: "box" | "cylinder";
+  /**
+   * Node in the catalogue file holding this kind's authored geometry. When
+   * present and loaded, it is drawn instead of the primitive.
+   */
+  readonly model?: string | undefined;
   /** Dimensions of the primitive. */
   readonly sizeX: number;
   readonly sizeY: number;
