@@ -36,6 +36,27 @@ Without it a step authored at exactly the limit fails about half the time,
 depending on how the modelling arithmetic rounded.
 """
 
+JUMP_SPEED = 8.5
+GRAVITY = -22.0
+"""The controller's jump, copied from the world's configuration.
+
+Used to derive the height above which a rise stops being ambiguous, below.
+"""
+
+CLIFF_RISE = (JUMP_SPEED**2) / (2 * abs(GRAVITY))
+"""Above this, a rise is unambiguously a wall and is not checked.
+
+The check exists to catch steps that *look climbable and are not*, and that is
+a narrow band: taller than the step limit, but no taller than the character
+can jump. A rise in that band is walk-blocked and jump-reachable, which reads
+as the world being broken rather than as a boundary. Above the jump apex
+nobody is confused -- a wall looks like a wall, and an outcrop is allowed to
+be scenery.
+
+Derived from the jump rather than picked, so tuning the jump moves the
+boundary with it instead of leaving a number here that used to be right.
+"""
+
 WORLDS = {
     "island": {
         "blend": "assets/world.blend",
