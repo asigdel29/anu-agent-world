@@ -43,6 +43,23 @@ export const DEFAULT_ORBIT: Omit<OrbitIslandOptions, "centreX" | "centreY" | "ce
   turnRate: 0.032,
 };
 
+/** Fraction of the frame the island should leave empty around itself. */
+const FRAMING_MARGIN = 1.25;
+
+/**
+ * How far back to sit in order to see a world of a given size.
+ *
+ * Derived rather than chosen. A fixed distance frames exactly one island and
+ * silently fails every other: too far and the world is a speck, too near and
+ * the opening shot is a wall of ground with no silhouette at all -- which is
+ * not obviously a framing problem when you are looking at it, because a
+ * screen full of grass looks like a world that failed to load.
+ */
+export function orbitDistanceFor(extent: number, fovDegrees: number): number {
+  const halfFov = (Math.max(fovDegrees, 1) * Math.PI) / 360;
+  return (Math.max(extent, 1) / 2 / Math.tan(halfFov)) * FRAMING_MARGIN;
+}
+
 export function createOrbitIslandMode(
   options: OrbitIslandOptions,
   id = "orbitIsland",

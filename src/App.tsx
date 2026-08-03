@@ -4,6 +4,7 @@ import { configureWorld } from "./engine/config/worldConfig";
 import { isDebugEnabled } from "./engine/debug/debugStats";
 import { greyboxCatalog, greyboxPlacementLimits } from "./world/greybox/catalog";
 import { greyboxConfig } from "./world/greybox/config";
+import { islandConfig } from "./world/island/config";
 import ControlsHint from "./ui/ControlsHint";
 import InteractPrompt from "./ui/InteractPrompt";
 import Panel from "./ui/Panel";
@@ -15,12 +16,18 @@ import LoadingScreen from "./ui/LoadingScreen";
 // while three.js and the R3F vendor chunks download in parallel.
 const Engine = lazy(() => import("./engine/Engine"));
 const GreyBoxScene = lazy(() => import("./world/greybox/GreyBoxScene"));
+const IslandScene = lazy(() => import("./world/island/IslandScene"));
 const DebugHUD = lazy(() => import("./engine/debug/DebugHUD"));
 
 // The world is installed before anything renders, so that a module reading it
 // during the first frame finds it present and validated. An inconsistent world
 // throws here rather than misbehaving later.
-configureWorld(greyboxConfig);
+// The grey box stays reachable forever, not as scaffolding but as the
+// engine's permanent test harness: when the art changes and movement starts
+// misbehaving, it is somewhere to stand that has not changed.
+const GREYBOX = new URLSearchParams(window.location.search).get("world") === "greybox";
+
+configureWorld(GREYBOX ? greyboxConfig : islandConfig);
 
 const DEBUG = isDebugEnabled();
 
@@ -42,7 +49,13 @@ export default function App() {
       )}
       <Suspense fallback={null}>
         <Engine catalog={greyboxCatalog} placementLimits={greyboxPlacementLimits}>
-          {(registry) => <GreyBoxScene colliderRegistry={registry} />}
+          {(registry) =>
+            GREYBOX ? (
+              <GreyBoxScene colliderRegistry={registry} />
+            ) : (
+              <IslandScene colliderRegistry={registry} />
+            )
+          }
         </Engine>
       </Suspense>
     </>

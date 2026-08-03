@@ -31,7 +31,12 @@ const BUDGETS = [
   // three.js dominates and is the thing most worth watching: it is the
   // difference between opening on a phone and not.
   { name: "three", maxKb: 200 },
-  { name: "r3f", maxKb: 60 },
+  // Raised from 60 when the world stopped being procedural: a world made of
+  // files needs a glTF loader, and that is about 20 kB gzipped. Recorded here
+  // rather than absorbed quietly, because the difference between a budget
+  // that moves for a reason and one that moves because it was in the way is
+  // the whole value of having one.
+  { name: "r3f", maxKb: 80 },
   { name: "index", maxKb: 70 },
 ];
 
