@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { createCameraPose } from "../cameraDirector";
 import type { CameraContext } from "../cameraDirector";
-import { DEFAULT_ORBIT, createOrbitIslandMode, wantsToDescend } from "./orbitIsland";
+import {
+  DEFAULT_ORBIT,
+  createOrbitIslandMode,
+  orbitDistanceFor,
+  wantsToDescend,
+} from "./orbitIsland";
 
 const CENTRE = { centreX: 0, centreY: 2, centreZ: 0 };
 const OPTIONS = { ...CENTRE, ...DEFAULT_ORBIT };
@@ -132,5 +137,33 @@ describe("wantsToDescend", () => {
 
   it("leaves someone who is only looking where they are", () => {
     expect(wantsToDescend(0, 0, false)).toBe(false);
+  });
+});
+
+describe("orbitDistanceFor", () => {
+  it("sits far enough back to see the whole world", () => {
+    // The island is 66 across; the fixed 42 this replaced could not frame it,
+    // and a screen full of grass reads as a world that failed to load rather
+    // than as a camera in the wrong place.
+    const distance = orbitDistanceFor(66, 45);
+    const visible = 2 * distance * Math.tan((45 * Math.PI) / 360);
+    expect(visible).toBeGreaterThan(66);
+  });
+
+  it("scales with the world", () => {
+    expect(orbitDistanceFor(200, 45)).toBeGreaterThan(orbitDistanceFor(66, 45));
+    expect(orbitDistanceFor(20, 45)).toBeLessThan(orbitDistanceFor(66, 45));
+  });
+
+  it("needs less room with a wider lens", () => {
+    expect(orbitDistanceFor(66, 70)).toBeLessThan(orbitDistanceFor(66, 45));
+  });
+
+  it("survives a degenerate world or lens", () => {
+    for (const [extent, fov] of [[0, 45], [66, 0], [0, 0], [-5, -5]] as const) {
+      const d = orbitDistanceFor(extent, fov);
+      expect(Number.isFinite(d)).toBe(true);
+      expect(d).toBeGreaterThan(0);
+    }
   });
 });

@@ -9,7 +9,12 @@ import { createSurfaceQuery } from "./collision/surfaceQuery";
 import type { CameraContext } from "./camera/cameraDirector";
 import { createCameraDirector, createCameraPose } from "./camera/cameraDirector";
 import { createFollowMode } from "./camera/modes/follow";
-import { DEFAULT_ORBIT, createOrbitIslandMode, wantsToDescend } from "./camera/modes/orbitIsland";
+import {
+  DEFAULT_ORBIT,
+  createOrbitIslandMode,
+  orbitDistanceFor,
+  wantsToDescend,
+} from "./camera/modes/orbitIsland";
 import { debugStats, isDebugEnabled } from "./debug/debugStats";
 import { consumeInteract, consumeJump, inputState, resolveMoveDirection } from "./input/inputState";
 import { chooseTarget, targets, useInteractionStore } from "./interaction/interactionStore";
@@ -145,8 +150,22 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
       director.push(
         createOrbitIslandMode({
           ...DEFAULT_ORBIT,
+          // Sized to the world rather than fixed, so a larger island is seen
+          // whole and a smaller one is not a speck.
+          distance: orbitDistanceFor(
+            Math.max(
+              cfg.bounds.maxX - cfg.bounds.minX,
+              cfg.bounds.maxZ - cfg.bounds.minZ,
+            ),
+            cfg.camera.fov,
+          ),
           centreX: (cfg.bounds.minX + cfg.bounds.maxX) / 2,
-          centreY: cfg.vertical.groundMinY + 2,
+          // The height people stand at, not the lowest geometry. On a world
+          // measured by the pipeline those are far apart: an island's
+          // `groundMinY` is the bottom of its keel, several units below the
+          // surface, and framing that aims the camera underneath the island
+          // and shows its top edge-on.
+          centreY: cfg.spawn.position[1],
           centreZ: (cfg.bounds.minZ + cfg.bounds.maxZ) / 2,
         }),
         ctx,

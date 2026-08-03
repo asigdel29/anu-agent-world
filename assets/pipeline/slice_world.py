@@ -83,20 +83,34 @@ def slice_world(world, chunk_size):
     entries = []
     for cx in range(min_cx, max_cx + 1):
         for cz in range(min_cz, max_cz + 1):
-            merged = _merge_for_cell(sources, cx, cz, chunk_size, depth)
-            if merged is None:
+            pieces = _pieces_for_cell(sources, cx, cz, chunk_size, depth)
+            if not pieces:
                 # An empty cell is not written at all. A manifest naming a
                 # file that does not exist is a hole the client cannot tell
                 # from a network failure.
                 continue
-            merged.name = f"chunk_{cx}_{cz}"
-            entries.append({"cx": cx, "cz": cz, "object": merged.name})
+            names = []
+            for index, piece in enumerate(pieces):
+                piece.name = f"chunk_{cx}_{cz}_{index}"
+                names.append(piece.name)
+            entries.append({"cx": cx, "cz": cz, "objects": names})
 
     return entries, bounds
 
 
-def _merge_for_cell(sources, cx, cz, chunk_size, depth):
-    """Copy the sources, trim each to one cell, and join what survives."""
+def _pieces_for_cell(sources, cx, cz, chunk_size, depth):
+    """Copy the sources and trim each to one cell, returning what survives.
+
+    The pieces are deliberately *not* joined. Joining them needs an operator
+    driven through a context override, and when that override is not quite
+    what the operator expected it does nothing and reports success -- which is
+    exactly what happened: every chunk exported carrying only its first piece,
+    and the island arrived with its terraces, pond and plot missing. The
+    geometry was correct, the manifest was correct, and the world was bare.
+
+    A glTF file holds as many objects as it is given, so there was never a
+    reason to join them.
+    """
     box = _cutter(f"cut_{cx}_{cz}", cx, cz, chunk_size, depth)
     pieces = []
 
@@ -122,17 +136,7 @@ def _merge_for_cell(sources, cx, cz, chunk_size, depth):
 
     bpy.data.objects.remove(box, do_unlink=True)
 
-    if not pieces:
-        return None
-
-    joined = pieces[0]
-    if len(pieces) > 1:
-        with bpy.context.temp_override(
-            object=joined, active_object=joined, selected_objects=pieces
-        ):
-            bpy.ops.object.join()
-
-    return joined
+    return pieces
 
 
 def export_chunks(entries, out_models, chunk_size):
@@ -140,13 +144,14 @@ def export_chunks(entries, out_models, chunk_size):
     os.makedirs(out_models, exist_ok=True)
 
     for entry in entries:
-        obj = bpy.data.objects[entry["object"]]
         for other in bpy.data.objects:
             other.select_set(False)
-        obj.select_set(True)
-        bpy.context.view_layer.objects.active = obj
+        chosen = [bpy.data.objects[name] for name in entry["objects"]]
+        for obj in chosen:
+            obj.select_set(True)
+        bpy.context.view_layer.objects.active = chosen[0]
 
-        filename = f"{entry['object']}.glb"
+        filename = f"chunk_{entry['cx']}_{entry['cz']}.glb"
         bpy.ops.export_scene.gltf(
             filepath=os.path.join(out_models, filename),
             export_format="GLB",
