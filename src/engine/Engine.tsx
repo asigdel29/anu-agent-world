@@ -18,6 +18,7 @@ import { world } from "./config/worldConfig";
 import Player from "./Player";
 import type { CatalogGeometry } from "./assets/catalogGeometry";
 import type { PlacementOp } from "./placements/placementOps";
+import FrameBudgetProbe from "../analytics/FrameBudgetProbe";
 
 /** Read once, so the probe is either mounted for the session or never. */
 const DEBUG = isDebugEnabled();
@@ -130,6 +131,7 @@ export default function Engine({
         onWorldChanged={setSnapshot}
       />
       {DEBUG && <DebugProbe colliderRegistry={registry} />}
+      <FrameBudgetProbe />
     </Canvas>
   );
 }

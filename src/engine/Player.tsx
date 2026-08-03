@@ -22,6 +22,7 @@ import { orbitState } from "./input/usePointerOrbit";
 import type { MoveIntent, MoveLimits } from "./locomotion/moveController";
 import { MAX_STEP_SEC, createMoveState, stepLocomotion } from "./locomotion/moveController";
 import { realtime } from "./net/useRealtime";
+import { record } from "../analytics/analytics";
 import type { PlacementSnapshot, PlacementStore } from "./placements/placementStore";
 import { subjectPosition } from "./streaming/chunkStore";
 import { world } from "./config/worldConfig";
@@ -207,6 +208,10 @@ export default function Player({ colliderRegistry, placements, onWorldChanged }:
     if (!working.descended && wantsToDescend(intent.moveX, intent.moveZ, intent.jumpPressed)) {
       working.descended = true;
       director.push(createFollowMode(), ctx);
+      // The one moment in the frame loop worth reporting, and it happens
+      // exactly once: the visitor decided to be in the world rather than to
+      // look at it. Everything else here runs sixty times a second.
+      record("world_entered");
     }
 
     // 3. Advance the character. Movement is held until the descent, so the

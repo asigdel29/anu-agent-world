@@ -1,0 +1,47 @@
+[
+  {
+    "event_name": "world_ready",
+    "event_description": "The world finished loading enough to stand on, with how long it took and how much was drawn.",
+    "file": "src/engine/streaming/chunkStore.ts"
+  },
+  {
+    "event_name": "world_entered",
+    "event_description": "The visitor moved for the first time, choosing to be in the world rather than look at it.",
+    "file": "src/engine/Player.tsx"
+  },
+  {
+    "event_name": "block_placed",
+    "event_description": "A visitor or an agent added something to the world, which is the act the whole design exists to enable.",
+    "file": "src/engine/net/useRealtime.ts"
+  },
+  {
+    "event_name": "block_removed",
+    "event_description": "Something was taken back out of the world.",
+    "file": "src/engine/net/useRealtime.ts"
+  },
+  {
+    "event_name": "build_refused",
+    "event_description": "The relay declined a build and said why, which is how quota and validation friction becomes visible.",
+    "file": "src/engine/net/useRealtime.ts"
+  },
+  {
+    "event_name": "panel_opened",
+    "event_description": "A visitor walked up to something and read it.",
+    "file": "src/ui/panelStore.ts"
+  },
+  {
+    "event_name": "relay_connected",
+    "event_description": "The world became shared, with the measured clock offset and how long the connection took.",
+    "file": "src/engine/net/useRealtime.ts"
+  },
+  {
+    "event_name": "relay_unavailable",
+    "event_description": "The world degraded to solo play, which is designed behaviour and needs to be distinguishable from a bug.",
+    "file": "src/engine/net/useRealtime.ts"
+  },
+  {
+    "event_name": "frame_budget_sampled",
+    "event_description": "One reading of frame rate, draw calls and chunk count per session, so slow devices are visible without sampling every frame.",
+    "file": "src/engine/debug/debugStats.ts"
+  }
+]

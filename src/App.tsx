@@ -15,6 +15,8 @@ import RotateHint from "./ui/RotateHint";
 import TouchControls from "./ui/TouchControls";
 import LoadingScreen from "./ui/LoadingScreen";
 import { useIslandGeometry } from "./world/island/useIslandGeometry";
+import { startAnalytics } from "./analytics/analytics";
+import { visitorId } from "./engine/net/visitorId";
 
 // The 3D stack is the only lazy boundary in the app: the DOM overlay paints
 // while three.js and the R3F vendor chunks download in parallel.
@@ -39,6 +41,11 @@ const WORLD = new URLSearchParams(window.location.search).get("world") ?? "voxel
 configureWorld(
   WORLD === "greybox" ? greyboxConfig : WORLD === "island" ? islandConfig : voxelConfig,
 );
+
+// Started before anything can report, and given the identity the world
+// already keeps to bring somebody back to the same body — which is exactly
+// the identity that makes a returning visit measurable.
+startAnalytics(visitorId());
 
 const DEBUG = isDebugEnabled();
 

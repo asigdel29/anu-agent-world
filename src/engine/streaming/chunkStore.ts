@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+import { record } from "../../analytics/analytics";
+
 /**
  * Whether the world is ready to be stood on.
  *
@@ -13,9 +15,22 @@ interface ChunkStore {
   setEagerReady: (ready: boolean) => void;
 }
 
-export const useChunkStore = create<ChunkStore>((set) => ({
+/** When the page began, so readiness can be reported as a duration. */
+const BOOT = typeof performance === "undefined" ? 0 : performance.now();
+
+export const useChunkStore = create<ChunkStore>((set, get) => ({
   eagerReady: false,
   setEagerReady: (eagerReady) => {
+    // Reported once, on the transition. This is the number that decides
+    // whether somebody stays: how long they waited before the world was
+    // something they could stand on, rather than how long a file took.
+    if (eagerReady && !get().eagerReady) {
+      record("world_ready", {
+        ready_ms: Math.round(
+          (typeof performance === "undefined" ? 0 : performance.now()) - BOOT,
+        ),
+      });
+    }
     set({ eagerReady });
   },
 }));

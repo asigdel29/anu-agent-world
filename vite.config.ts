@@ -17,6 +17,10 @@ export default defineConfig({
           groups: [
             { name: "three", test: /[\\/]node_modules[\\/]three[\\/]/ },
             { name: "r3f", test: /[\\/]node_modules[\\/]@react-three[\\/]/ },
+      // Its own group so its size is attributable. It arrived once inside a
+      // chunk named after a texture ramp, which is exactly the state a
+      // budget-by-group exists to prevent.
+      { name: "analytics", test: /[\\/]node_modules[\\/]posthog-js[\\/]/ },
           ],
         },
       },
