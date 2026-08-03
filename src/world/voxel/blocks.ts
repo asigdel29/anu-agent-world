@@ -73,17 +73,21 @@ export function isVisible(id: number): boolean {
 /**
  * Whether a face between two blocks should be drawn.
  *
- * The rule that decides how much geometry a world costs. A face is emitted
- * only where a visible block meets something that is not the same kind of
- * surface — so the inside of a hill is never built, and a lake bed under
- * water is not drawn twice.
+ * The rule that decides how much geometry a world costs, and it is as simple
+ * as it looks: a face exists only where something visible meets air.
+ *
+ * The case worth stating is water. Every block here is opaque, water
+ * included, so a lake bed *under* water cannot be seen and building it is
+ * pure waste — the water's own surface is what anybody looks at. An earlier
+ * version drew the bed as well, on the reasoning that water is "not solid",
+ * which confused two different questions: whether a character can walk
+ * through a block, and whether light can. Only the second one decides a face.
+ *
+ * If water ever becomes transparent this has to change, and the test named
+ * for the lake bed is where it will fail.
  */
 export function facesBetween(here: number, neighbour: number): boolean {
-  if (!isVisible(here)) return false;
-  if (!isVisible(neighbour)) return true;
-  // Water against water is interior; water against solid is the solid's face.
-  if (here === neighbour) return false;
-  return !isSolid(neighbour);
+  return isVisible(here) && !isVisible(neighbour);
 }
 
 /** The blocks an agent or a visitor may place. */
