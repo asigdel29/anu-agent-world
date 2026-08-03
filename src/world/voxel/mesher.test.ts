@@ -9,10 +9,21 @@ const SEED = 0x5eed;
 const STONE = BLOCK_BY_NAME.get("stone")!.id;
 const WATER = BLOCK_BY_NAME.get("water")!.id;
 
-/** An empty chunk of a given size, for building shapes by hand. */
+/**
+ * An empty chunk of a given size, for building shapes by hand.
+ *
+ * Scanned to the ceiling: these are testing the face rules rather than the
+ * scan limit, and a hand-built shape has no generator to record its top.
+ */
 function emptyChunk(size: number, height: number, margin = 1): ChunkData {
   const stride = size + margin * 2;
-  return { blocks: new Uint8Array(stride * stride * height), size, margin, height };
+  return {
+    blocks: new Uint8Array(stride * stride * height),
+    size,
+    margin,
+    height,
+    maxY: height - 1,
+  };
 }
 
 function set(data: ChunkData, x: number, y: number, z: number, block: number): void {
@@ -158,5 +169,38 @@ describe("meshing real terrain", () => {
 
   it("differs between chunks", () => {
     expect(meshChunk(generateChunk(3, -2, 16, SEED)).faces).not.toBe(mesh.faces);
+  });
+});
+
+describe("the scan limit", () => {
+  it("records the highest block in a generated chunk", () => {
+    const data = generateChunk(0, 0, 16, SEED);
+    expect(data.maxY).toBeGreaterThan(0);
+    expect(data.maxY).toBeLessThan(data.height);
+    for (let x = 0; x < data.size; x += 1) {
+      for (let z = 0; z < data.size; z += 1) {
+        for (let y = data.maxY + 1; y < data.height; y += 1) {
+          expect(blockIn(data, x, y, z)).toBe(AIR);
+        }
+      }
+    }
+  });
+
+  it("skips a meaningful part of the column", () => {
+    // The reason it exists: on this terrain the top of every chunk is air,
+    // and scanning it produces nothing at a cost proportional to the world
+    // height.
+    const data = generateChunk(0, 0, 16, SEED);
+    expect(data.maxY).toBeLessThan(data.height * 0.85);
+  });
+
+  it("loses no faces by stopping early", () => {
+    // The check that matters: a scan limit that were too low would quietly
+    // shave the tops off hills.
+    const data = generateChunk(2, -3, 16, SEED);
+    const limited = meshChunk(data);
+    const full = meshChunk({ ...data, maxY: data.height - 1 });
+    expect(limited.faces).toBe(full.faces);
+    expect(limited.positions).toEqual(full.positions);
   });
 });

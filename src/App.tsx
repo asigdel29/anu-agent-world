@@ -7,6 +7,7 @@ import { greyboxConfig } from "./world/greybox/config";
 import { islandCatalog, islandPlacementLimits } from "./world/island/catalog";
 import { islandConfig } from "./world/island/config";
 import { islandSeed } from "./world/island/seed";
+import { voxelConfig } from "./world/voxel/config";
 import ControlsHint from "./ui/ControlsHint";
 import InteractPrompt from "./ui/InteractPrompt";
 import Panel from "./ui/Panel";
@@ -20,6 +21,7 @@ import { useIslandGeometry } from "./world/island/useIslandGeometry";
 const Engine = lazy(() => import("./engine/Engine"));
 const GreyBoxScene = lazy(() => import("./world/greybox/GreyBoxScene"));
 const IslandScene = lazy(() => import("./world/island/IslandScene"));
+const VoxelScene = lazy(() => import("./world/voxel/VoxelScene"));
 const DebugHUD = lazy(() => import("./engine/debug/DebugHUD"));
 
 // The world is installed before anything renders, so that a module reading it
@@ -28,9 +30,15 @@ const DebugHUD = lazy(() => import("./engine/debug/DebugHUD"));
 // The grey box stays reachable forever, not as scaffolding but as the
 // engine's permanent test harness: when the art changes and movement starts
 // misbehaving, it is somewhere to stand that has not changed.
-const GREYBOX = new URLSearchParams(window.location.search).get("world") === "greybox";
+// The voxel world is the world now. The grey box and the island stay
+// reachable behind a parameter: the grey box because it is the engine's
+// permanent test harness, and the island because it is the proof that the
+// engine does not know what a world is.
+const WORLD = new URLSearchParams(window.location.search).get("world") ?? "voxel";
 
-configureWorld(GREYBOX ? greyboxConfig : islandConfig);
+configureWorld(
+  WORLD === "greybox" ? greyboxConfig : WORLD === "island" ? islandConfig : voxelConfig,
+);
 
 const DEBUG = isDebugEnabled();
 
@@ -76,12 +84,16 @@ export default function App() {
         </Suspense>
       )}
       <Suspense fallback={null}>
-        {GREYBOX ? (
+        {WORLD === "greybox" ? (
           <Engine catalog={greyboxCatalog} placementLimits={greyboxPlacementLimits}>
             {(registry) => <GreyBoxScene colliderRegistry={registry} />}
           </Engine>
-        ) : (
+        ) : WORLD === "island" ? (
           <IslandWorld />
+        ) : (
+          <Engine catalog={greyboxCatalog} placementLimits={greyboxPlacementLimits}>
+            {(registry) => <VoxelScene colliderRegistry={registry} />}
+          </Engine>
         )}
       </Suspense>
     </>
