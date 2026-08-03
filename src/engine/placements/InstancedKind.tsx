@@ -136,10 +136,21 @@ export default function InstancedKind({ kind, instances, version, geometry }: Pr
       ) : (
         <cylinderGeometry args={[kind.sizeX / 2, kind.sizeX / 2, kind.sizeY, 12]} />
       )}
+      {/* Authored geometry carries its own colours per vertex; a primitive
+          has one colour for the whole kind. Tinting the former by the kind's
+          colour as well would multiply every part towards it and undo the
+          reason for baking them in. */}
       {lit ? (
-        <meshToonMaterial color={kind.color} gradientMap={toonRamp()} />
+        <meshToonMaterial
+          color={geometry ? "#ffffff" : kind.color}
+          vertexColors={geometry !== undefined}
+          gradientMap={toonRamp()}
+        />
       ) : (
-        <meshBasicMaterial color={kind.color} />
+        <meshBasicMaterial
+          color={geometry ? "#ffffff" : kind.color}
+          vertexColors={geometry !== undefined}
+        />
       )}
     </instancedMesh>
     <instancedMesh

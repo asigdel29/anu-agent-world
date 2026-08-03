@@ -41,7 +41,7 @@ interface Kind {
 }
 
 const catalog = JSON.parse(
-  readFileSync(join(ROOT, "public", "world", "catalog.json"), "utf-8"),
+  readFileSync(join(ROOT, "src", "world", "island", "data", "catalog.json"), "utf-8"),
 ) as { kinds: readonly Kind[] };
 
 describe("the prop catalogue", () => {

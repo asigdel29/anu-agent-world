@@ -1,5 +1,5 @@
 import type { WorldConfig } from "../../engine/config/types";
-import constants from "../../../public/world/constants.json";
+import constants from "./data/constants.json";
 import { islandChunkSize } from "./manifest";
 
 /**
